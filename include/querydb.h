@@ -7,7 +7,7 @@ class rQuery{
 };
 
 rQuery::rQuery(const rFirst &r1,const rSecond &r2, const loadedDB & lddb ){
-        rnaQ.resize(lddb.)
+        rnaQ.resize(0);
         for (rSecondRead r2read:r2.reads){
 
         }
