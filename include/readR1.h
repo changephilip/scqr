@@ -6,7 +6,7 @@ const uint32_t umi     = 0xC;
 typedef struct
 {
         uint32_t tag;
-        uint32_t id;
+        //uint32_t id;
         uint16_t sample; //barcode
         //std::string pair1;
 } rOneRead;
@@ -64,7 +64,7 @@ rFirst::rFirst(const std::string r1gz)
                 {
                         rOneRead tmpRead;
                         tmpRead.tag = thistag;
-                        tmpRead.id  = readId;
+                        //tmpRead.id  = readId;
                         //tmpRead.sample = thisbarcode;
                         //tmpRead.pair1 = seq->name.s;
                         reads.push_back(tmpRead);
@@ -77,7 +77,8 @@ rFirst::rFirst(const std::string r1gz)
         }
         std::cout << reads.size() << std::endl;
         std::cout << seqId.size() << std::endl;
-        assert(reads.size() == seqId.size());
+        // reads.size() >> seqId.size()
+        //assert(reads.size() == seqId.size());
 
         auto     it    = sampleSet.begin();
         uint16_t count = 0;

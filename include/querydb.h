@@ -110,27 +110,25 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
                 end = lddb.db.size();
         }
 
-        auto ps = lddb.db.begin();
-        std::advance(ps, start);
-
-        auto pe  = lddb.db.begin();
-        auto mid = ps + (pe - ps) / 2;
-        std::advance(pe, end);
+        uint32_t ps = start;
+        uint32_t pe = end;
+        uint32_t mid = ps + (pe-ps)/2;
+       
         while (ps != pe)
         {
-                if (mid->kmer < key)
+                if (lddb.db[mid].kmer < key)
                 {
                         ps  = mid;
                         mid = ps + (pe - ps) / 2;
                 }
-                else if (mid->kmer > key)
+                else if (lddb.db[mid].kmer > key)
                 {
                         pe  = mid;
                         mid = ps + (pe - ps) / 2;
                 }
                 else
                 {
-                        return mid->geneId;
+                        return lddb.db[mid].geneId;
                 }
         }
         return 0xFFFFFFFF;

@@ -4,20 +4,20 @@
 typedef struct
 {
         //std::string pair2;
-        uint32_t readR1Id;
+        //uint32_t readR1Id;
         uint16_t sample;
         std::string seq;
-        std::string q; // quality
+        //std::string q; // quality
 } rSecondRead;
 
 class rSecond {
  public:
         std::vector<rSecondRead> reads;
         std::vector<std::vector<rSecondRead>> readsPack;
-        rSecond(const std::string r2gz, const rFirst & rfirst);
+        rSecond(const std::string &r2gz, const rFirst & rfirst);
 };
 
-rSecond::rSecond(const std::string r2gz, const rFirst & rfirst){
+rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
         gzFile fp;
         kseq_t *seq;
         int l;
@@ -32,9 +32,9 @@ rSecond::rSecond(const std::string r2gz, const rFirst & rfirst){
                         uint32_t seqId = rfirst.readsNameTable.find(thisName)->second;
                         rSecondRead tmp;
                         tmp.seq = seq->seq.s;
-                        tmp.readR1Id = seqId;
+                        //tmp.readR1Id = seqId;
                         tmp.sample = rfirst.reads[seqId].sample;
-                        tmp.q = seq->qual.s;
+                        //tmp.q = seq->qual.s;
                         //assert(rfirst.readsNameTable.find(thisName).second);
                         //reads.push_back(tmp);
                         readsPack[tmp.sample].push_back(tmp);
