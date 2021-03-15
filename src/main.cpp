@@ -1,4 +1,5 @@
-#include "../include/mkdb.h"
+#include "../include/querydb.h"
+#include <getopt.h>
 #include <stdlib.h>
 
 int main(int argc, char *argv[])
@@ -12,9 +13,13 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
 
-        std::vector<kmer_t> db;
-        uint32_t index[256];
-        std::vector<std::string> gene;
-        read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", db, index, gene);
+        //std::vector<kmer_t> db;
+        //uint32_t index[256];
+        //std::vector<std::string> gene;
+        loadedDB lldb;
+        read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", lldb);
+        rFirst r1(argv[2]);
+        rSecond r2(argv[3],r1);
+        rQuery rQ(r1,r2,lldb,8,argv[4]);
         return 0;
 }

@@ -15,7 +15,7 @@
 #include <map>
 #include <algorithm>
 
-#include <fmt/ranges.h>
+//#include <fmt/ranges.h>
 #include <zlib.h>
 #include <omp.h>
 #include <parallel/algorithm>
@@ -541,6 +541,7 @@ void transcriptomeFa::writedb()
         for (auto geneName : geneList)
         {
                 std::fprintf(fgene, "%d\t%s\n", geneId, geneName.c_str());
+                geneId++;
         }
         std::fclose(fgene);
 }
@@ -595,6 +596,6 @@ void read_DB_Index(const std::string         f_db,
                         break;
                 }
         }
-        fmt::print("{}\n", ldDB.gene);
+        //fmt::print("{}\n", ldDB.gene);
         std::fclose(fgene);
 };
