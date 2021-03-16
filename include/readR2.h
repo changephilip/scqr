@@ -25,6 +25,9 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
         seq = kseq_init(fp);
         uint32_t readId = 0;
 
+        std::time_t t = std::time(nullptr);
+        std::cout << std::asctime(std::localtime(&t)) << "\tStart of R2 " << std::endl;
+
         readsPack.resize(rfirst.sampleId.size());
         while (( l = kseq_read(seq)) >=0){
                 std::string thisName = seq->name.s;
@@ -34,6 +37,7 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
                         tmp.seq = seq->seq.s;
                         //tmp.readR1Id = seqId;
                         tmp.sample = rfirst.reads[seqId].sample;
+                        //tmp.sample = rfirst.sampleList.find(seqId)->second;
                         //tmp.q = seq->qual.s;
                         //assert(rfirst.readsNameTable.find(thisName).second);
                         //reads.push_back(tmp);
@@ -41,4 +45,7 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
                 }
                 readId ++;
         }
+
+        std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R2 " << std::endl;
+
 }

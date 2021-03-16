@@ -1,6 +1,6 @@
 CC=g++
 
-CXXFLAGS=--std=c++11 -g -fopenmp -lz -lm -lfmt
+CXXFLAGS=--std=c++11 -g -fopenmp -lz -lm 
 
 TOP_DIR=.
 INCLUDE_DIR=-I$(TOP_DIR)/include

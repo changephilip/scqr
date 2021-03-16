@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
 {
         if (argv[1] != NULL and std::atoi(argv[2]))
         {
-                transcriptomeFa t(argv[1], 8);
+                //        transcriptomeFa t(argv[1], 8);
         }
         else
         {
@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
         //std::vector<std::string> gene;
         loadedDB lldb;
         read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", lldb);
-        rFirst r1(argv[2]);
-        rSecond r2(argv[3],r1);
-        rQuery rQ(r1,r2,lldb,8,argv[4]);
+        rFirst r1(argv[3]);
+        rSecond r2(argv[4],r1);
+        rQuery rQ(r1,r2,lldb,32,argv[5]);
         return 0;
 }

@@ -1,5 +1,6 @@
 #include "../include/readR2.h"
 #include <mutex>
+#include <ctime>
 
 class rQuery {
        public:
@@ -27,7 +28,14 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
                 for (uint32_t j = 0; j < r2.readsPack[i].size(); j++)
                 {
                         uint32_t q = align(r2.readsPack[i][j]);
-                        quantRNAMatrix[i][q]++;
+                        if (q < lddb.gene.size())
+                        {
+                                quantRNAMatrix[i][q]++;
+                        }
+                }
+                if ( i % 256 ==0){
+                        std::time_t t = std::time(nullptr);
+                        std::cout << std::asctime(std::localtime(&t)) << "\tStep is " << i << std::endl;
                 }
         }
 
@@ -80,7 +88,8 @@ inline uint32_t rQuery::align(const rSecondRead &read)
                 }
                 uint64_t kmer = baseToBinary(p.base(), kmerLength, thisStrainType);
                 uint64_t key  = search(kmer, mydb);
-                if (key != 0xFFFFFFFF and score.find(key) != score.end())
+                if (key == 0xFFFFFFFF) continue;
+                if (score.find(key) != score.end())
                 {
                         score.find(key)->second++;
                 }
@@ -101,7 +110,7 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
         uint32_t start;
         uint32_t end;
         start = lddb.index[key >> (64 - 8)];
-        if (start != 0xFF)
+        if ((key >> 56) != 0xFF)
         {
                 end = lddb.index[(key >> (64 - 8)) + 1];
         }

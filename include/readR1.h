@@ -54,6 +54,10 @@ rFirst::rFirst(const std::string r1gz)
         fp              = gzopen(r1gz.c_str(), "r");
         seq             = kseq_init(fp);
         uint32_t readId = 0;
+
+        std::time_t t = std::time(nullptr);
+        std::cout << std::asctime(std::localtime(&t)) << "\tStart of R1 " << std::endl;
+
         while ((l = kseq_read(seq)) >= 0)
         {
                 uint16_t thisbarcode = readBarcode(seq->seq.s);
@@ -90,8 +94,17 @@ rFirst::rFirst(const std::string r1gz)
                 count++;
         }
 
-        for (auto &read : reads)
-        {
-                read.sample = sampleList.find(read.tag >> 12)->second;
+        //for (auto &read : reads)
+        //{
+        //        read.sample = sampleList.find(read.tag >> 12)->second;
+        //}
+
+        #pragma omp parallel for
+        for (uint32_t i=0;i< reads.size();i++){
+                reads[i].sample = sampleList.find(reads[i].tag >> 12)->second;
         }
+
+        std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R1 " << std::endl;
+
+
 }

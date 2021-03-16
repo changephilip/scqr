@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <cassert>
+#include <ctime>
 
 #include <fstream>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include <set>
 #include <map>
 #include <algorithm>
+
 
 //#include <fmt/ranges.h>
 #include <zlib.h>
@@ -585,16 +587,21 @@ void read_DB_Index(const std::string         f_db,
         std::fclose(findex);
 
         fgene = std::fopen(f_gene.c_str(), "r");
+        std::vector<std::string> _gene;
         while (true)
         {
                 char     geneName_c[128];
                 if (fscanf(fgene, "%s\n", geneName_c) != EOF)
                 {
-                        ldDB.gene.push_back(std::string(geneName_c));
+                        _gene.push_back(std::string(geneName_c));
+                        //ldDB.gene.push_back(std::string(geneName_c));
                 }
                 else{
                         break;
                 }
+        }
+        for (uint32_t i=0;i<_gene.size()/2;i++){
+                ldDB.gene.push_back(_gene[2*i+1]);
         }
         //fmt::print("{}\n", ldDB.gene);
         std::fclose(fgene);
