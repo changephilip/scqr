@@ -16,7 +16,6 @@
 #include <map>
 #include <algorithm>
 
-
 //#include <fmt/ranges.h>
 #include <zlib.h>
 #include <omp.h>
@@ -27,7 +26,8 @@
 
 KSEQ_INIT(gzFile, gzread)
 
-const uint32_t rNATailLength        = 150;
+#define rNATailLength 150
+//const uint32_t rNATailLength        = 150;
 const uint32_t kmerLength           = 32;
 const uint64_t conversionTable[128] = {4,
                                        4,
@@ -109,6 +109,7 @@ const uint64_t conversionTable[128] = {4,
                                        4,
                                        4,
                                        4,
+                                       // N
                                        4,
                                        4,
                                        4,
@@ -142,6 +143,7 @@ const uint64_t conversionTable[128] = {4,
                                        4,
                                        4,
                                        4,
+                                       //N
                                        4,
                                        4,
                                        4,
@@ -173,8 +175,18 @@ enum baseType
         A,
         C,
         G,
+        N,
         T
+        
 };
+enum baseTypel{
+        a,
+        c,
+        g,
+        n,
+        t
+};
+
 const char supplyTable[] = "ACGT";
 
 typedef struct
@@ -186,6 +198,20 @@ typedef struct
         std::string geneName;
         uint32_t    geneId;
 } transFa;
+
+inline uint64_t baseToBinaryForward_Barcode(const char *seq, uint64_t length){
+        assert(length <= 21);
+        uint64_t p =0 ;
+        uint64_t bitwidth  = (length -1) * 3;
+        uint64_t tmp = 0ULL;
+        while (p < length)
+        {
+                tmp|= (conversionTable[seq[p]] << bitwidth);
+                p++;
+                bitwidth -=3;
+        }
+        return tmp;
+}
 
 inline uint64_t baseToBinaryForward(const char* seq, uint64_t length)
 {
@@ -341,6 +367,8 @@ void transcriptomeFa::addKmer(transFa& rna)
         std::vector<kmer_t> pkmer;
         std::vector<kmer_t> rkmer;
         uint32_t            cutLength = 0;
+        // build rna index from tail with length rNATailLength
+#if ((rNATailLength))
         if (rna.length >= rNATailLength)
         {
                 cutLength = rNATailLength;
@@ -357,6 +385,13 @@ void transcriptomeFa::addKmer(transFa& rna)
         char* p         = NULL;
         p               = rna.seq + rna.length - cutLength;
         uint32_t n_kmer = cutLength - kmerLength + 1;
+#else
+        // build rna index for start to end
+        char* p         = NULL;
+        p               = rna.seq;
+        uint32_t n_kmer = rna.length - kmerLength + 1;
+
+#endif
         for (uint64_t i = 0; i < n_kmer; i++)
         {
                 kmer_t     tmpK;
@@ -506,9 +541,10 @@ void transcriptomeFa::mkindex()
 {
         uint32_t shiftSize = (sizeof(uint64_t) - sizeof(uint8_t)) * 8;
         uint32_t index_stash[256];
-        for (uint32_t i=0;i<256;i++){
-                index_stash[i]=0;
-                index[i]=0;
+        for (uint32_t i = 0; i < 256; i++)
+        {
+                index_stash[i] = 0;
+                index[i]       = 0;
         }
         for (uint32_t i = 0; i < contact.size(); i++)
         {
@@ -523,7 +559,7 @@ void transcriptomeFa::mkindex()
         for (uint32_t i = 1; i < 256; i++)
         {
                 //index[i] += index_stash[i - 1];
-                index[i] = index[i-1] + index_stash[i-1];
+                index[i] = index[i - 1] + index_stash[i - 1];
         }
 }
 
@@ -569,10 +605,10 @@ typedef struct
         std::vector<std::string> gene;
 } loadedDB;
 
-void read_DB_Index(const std::string         f_db,
-                   const std::string         f_index,
-                   const std::string         f_gene,
-                   loadedDB & ldDB)
+void read_DB_Index(const std::string f_db,
+                   const std::string f_index,
+                   const std::string f_gene,
+                   loadedDB&         ldDB)
 {
         FILE* fdb;
         FILE* findex;
@@ -596,18 +632,20 @@ void read_DB_Index(const std::string         f_db,
         std::vector<std::string> _gene;
         while (true)
         {
-                char     geneName_c[128];
+                char geneName_c[128];
                 if (fscanf(fgene, "%s\n", geneName_c) != EOF)
                 {
                         _gene.push_back(std::string(geneName_c));
                         //ldDB.gene.push_back(std::string(geneName_c));
                 }
-                else{
+                else
+                {
                         break;
                 }
         }
-        for (uint32_t i=0;i<_gene.size()/2;i++){
-                ldDB.gene.push_back(_gene[2*i+1]);
+        for (uint32_t i = 0; i < _gene.size() / 2; i++)
+        {
+                ldDB.gene.push_back(_gene[2 * i + 1]);
         }
         //fmt::print("{}\n", ldDB.gene);
         std::fclose(fgene);

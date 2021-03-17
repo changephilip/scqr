@@ -5,7 +5,7 @@ typedef struct
 {
         //std::string pair2;
         //uint32_t readR1Id;
-        sample_t sample;
+        barcode_t sample;
         std::string seq;
         //std::string q; // quality
 } rSecondRead;
@@ -28,11 +28,11 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
         std::time_t t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tStart of R2 " << std::endl;
 
-        readsPack.resize(rfirst.sampleId.size());
+        readsPack.resize(rfirst.barcodeVector.size());
         while (( l = kseq_read(seq)) >=0){
-                std::string thisName = seq->name.s;
-                if (rfirst.readsNameTable.find(thisName)!= rfirst.readsNameTable.end()){
-                        uint32_t seqId = rfirst.readsNameTable.find(thisName)->second;
+                auto nameHash = rfirst.stringHash(seq->name.s);
+                if (rfirst.readsNameTable.find(nameHash)!= rfirst.readsNameTable.end()){
+                        uint32_t seqId = rfirst.readsNameTable.find(nameHash)->second;
                         rSecondRead tmp;
                         tmp.seq = seq->seq.s;
                         //tmp.readR1Id = seqId;
