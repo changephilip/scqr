@@ -506,6 +506,10 @@ void transcriptomeFa::mkindex()
 {
         uint32_t shiftSize = (sizeof(uint64_t) - sizeof(uint8_t)) * 8;
         uint32_t index_stash[256];
+        for (uint32_t i=0;i<256;i++){
+                index_stash[i]=0;
+                index[i]=0;
+        }
         for (uint32_t i = 0; i < contact.size(); i++)
         {
                 uint64_t s = contact[i].kmer;
@@ -514,10 +518,12 @@ void transcriptomeFa::mkindex()
         }
         //do prefix sum
         uint32_t index_presum[256];
-        index[0] = index_stash[0];
+        index[0] = 0;
+        //index[1] = index_stash[0];
         for (uint32_t i = 1; i < 256; i++)
         {
-                index[i] += index_stash[i - 1];
+                //index[i] += index_stash[i - 1];
+                index[i] = index[i-1] + index_stash[i-1];
         }
 }
 

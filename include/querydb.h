@@ -1,7 +1,7 @@
 #include "../include/readR2.h"
 #include <mutex>
 #include <ctime>
-
+typedef uint32_t gene_t;
 class rQuery {
        public:
         rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32_t _thread, const std::string &result);
@@ -19,7 +19,12 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         for (uint16_t i = 0; i < r1.sampleId.size(); i++)
         {
                 quantRNAMatrix[i] = new uint32_t[lddb.gene.size()];
+                for (uint32_t j=0;j< lddb.gene.size();j++){
+                        quantRNAMatrix[i][j]=0;
+                }
         }
+        std::cout << "GENE LIST LENGTH is " << lddb.gene.size() << std::endl;
+        std::cout << "Num of Barcode(sample) is " << r1.sampleId.size() << std::endl;
         omp_set_dynamic(false);
         omp_set_num_threads(_thread);
         #pragma omp parallel for
@@ -33,7 +38,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
                                 quantRNAMatrix[i][q]++;
                         }
                 }
-                if ( i % 256 ==0){
+                if ( i % 8 ==0 and true){
                         std::time_t t = std::time(nullptr);
                         std::cout << std::asctime(std::localtime(&t)) << "\tStep is " << i << std::endl;
                 }
@@ -43,13 +48,36 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         //print result
         FILE* fresult;
         fresult=std::fopen(result.c_str(),"w");
-        std::fprintf(fresult,"\t");
+
+        //header
+        std::fprintf(fresult,"G/S");
+
+        for (uint32_t i=0;i< r1.sampleId.size();i++){
+                std::fprintf(fresult, "\t%x",r1.sampleId[i]);
+        }
+        std::fprintf(fresult, "\n");
+
+        for (uint32_t i=0;i < lddb.gene.size();i++){
+                std::fprintf(fresult, "%s",lddb.gene[i].c_str());
+                for (uint32_t j=0;j< r1.sampleId.size();j++){
+                        std::fprintf(fresult, "\t%d",quantRNAMatrix[j][i]);
+                }
+                std::fprintf(fresult, "\n");
+        }
         //print only sample 1
+        /*
         fprintf(fresult, "%d\t",r1.sampleId[0]);
         auto thissampleid = r1.sampleId[0];
         for (uint32_t i =0 ;i< lddb.gene.size();i++){
                 fprintf(fresult, "%d\n",quantRNAMatrix[0][i]);
         }
+        */
+        std::fclose(fresult);
+
+        for (uint32_t i=0;i< r1.sampleId.size();i++){
+                delete[] quantRNAMatrix[i];
+        }
+        delete[] quantRNAMatrix;
  }
 
 template <class T1, class T2> inline T1 findMapMax(std::map<T1, T2> &in)
@@ -71,14 +99,17 @@ template <class T1, class T2> inline T1 findMapMax(std::map<T1, T2> &in)
 inline uint32_t rQuery::align(const rSecondRead &read)
 {
         uint32_t                     stride = 1;
+        if (read.seq.size() < kmerLength) return 0xFFFFFFFF;
         uint32_t                     n_kmer = read.seq.size() - kmerLength + 1;
+        //score : [geneId, count]
         std::map<uint32_t, uint16_t> score;
-        auto                         p        = read.seq.begin();
+        //auto                         p        = read.seq.begin();
+        const char *t = read.seq.c_str();
         uint32_t                     distance = 0;
-        while (p != read.seq.end())
+        for (uint32_t i =0;i < n_kmer ;i++)
         {
                 strainType thisStrainType;
-                if (forwardOrBackward(p.base(), kmerLength))
+                if (forwardOrBackward(t, kmerLength))
                 {
                         thisStrainType = forward;
                 }
@@ -86,8 +117,9 @@ inline uint32_t rQuery::align(const rSecondRead &read)
                 {
                         thisStrainType = backward;
                 }
-                uint64_t kmer = baseToBinary(p.base(), kmerLength, thisStrainType);
+                uint64_t kmer = baseToBinary(t, kmerLength, thisStrainType);
                 uint64_t key  = search(kmer, mydb);
+                t++;
                 if (key == 0xFFFFFFFF) continue;
                 if (score.find(key) != score.end())
                 {
@@ -98,8 +130,7 @@ inline uint32_t rQuery::align(const rSecondRead &read)
                         score.insert(std::pair<uint32_t, uint16_t>(key, 0));
                 }
                 distance++;
-                p++;
-                auto p = score.begin();
+                //auto p = score.begin();
         }
 
         return findMapMax(score);
@@ -123,7 +154,7 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
         uint32_t pe = end;
         uint32_t mid = ps + (pe-ps)/2;
        
-        while (ps != pe)
+        while (ps+1 != pe)
         {
                 if (lddb.db[mid].kmer < key)
                 {
@@ -139,6 +170,12 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
                 {
                         return lddb.db[mid].geneId;
                 }
+        }
+        if ( lddb.db[ps].kmer == key){
+                return ps;
+        }
+        if (lddb.db[pe].kmer == key){
+                return pe;
         }
         return 0xFFFFFFFF;
 }

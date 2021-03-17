@@ -5,7 +5,7 @@ typedef struct
 {
         //std::string pair2;
         //uint32_t readR1Id;
-        uint16_t sample;
+        sample_t sample;
         std::string seq;
         //std::string q; // quality
 } rSecondRead;
@@ -46,6 +46,7 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
                 readId ++;
         }
 
+        t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R2 " << std::endl;
 
 }
