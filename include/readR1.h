@@ -1,6 +1,9 @@
 #include "../include/mkdb.h"
 #include <stdint.h>
 
+#include <immintrin.h>
+#include <popcntintrin.h>
+
 #define _RUNMODE_ 0
 #if ((_RUNMODE_))
 const uint32_t barcode = 0x10;
@@ -10,6 +13,9 @@ const uint32_t barcode = 0x8;
 const uint32_t umi     = 0x6;
 #endif
 
+const uint32_t polyT = 0x8;
+const uint32_t polyTMask = 0xFFFF;
+const uint32_t polyTMask1 = 0xFFF0;
 #define jumpbit 0
 
 typedef uint64_t tag_t;
@@ -42,18 +48,21 @@ class rFirst {
         std::hash<std::string> stringHash;
         void barcodeCorrect();
 };
-
+/*
 template<class T>
 inline bool med(T in,T target){
         uint32_t bitWise = sizeof(T)*8;
         uint32_t p = in xor target ;
         
 }
+*/
 
 inline barcode_t readBarcode(const char *seq)
 {
-        return (barcode_t)baseToBinaryForward_Barcode(seq + jumpbit, barcode);
+        //return (barcode_t)baseToBinaryForward_Barcode(seq + jumpbit, barcode);
+        return (barcode_t)baseToBinaryForward(seq + jumpbit, barcode);
 }
+
 inline umi_t readUmi(const char *seq)
 {
         return (umi_t)baseToBinaryForward(seq + barcode + jumpbit , umi);
@@ -63,6 +72,37 @@ inline tag_t readTag(const char *seq)
 {
         return (tag_t)baseToBinaryForward(seq + jumpbit , umi + barcode);
 }
+
+inline uint64_t  checkPolyT(const char *seq){
+        uint64_t T = baseToBinaryForward(seq + jumpbit + umi +barcode, polyT);
+        T |= 0ULL;
+        uint32_t p = (T xor polyTMask);
+        uint32_t shift = _mm_popcnt_u64(p);
+        uint32_t q = 32;
+        uint32_t count =0;
+        while (q != 0 ){
+        }
+        while (q < polyT)
+        {
+                if (*(seq + jumpbit + umi + barcode) != 'T'){
+                        
+                }
+        }
+        return 0;
+}
+
+/*
+void rFirst::barcodeCorrect(){
+        auto dbscan = DBSCAN<uint64_t, uint64_t>();
+
+        auto data = std::vector<uint64_t>{barcodeSet.begin(),barcodeSet.end()};
+
+        dbscan.Run(&data, 1, 1, 4000);
+        auto noise = dbscan.Noise;
+        auto clusters = dbscan.Clusters;
+}
+*/
+
 /*
   filter unique tag(barcode + umi) and get these reads from R1
   save out these sample(barcode) id and transfer into 0-based index.

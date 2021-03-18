@@ -16,7 +16,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
 {
         mydb           = lddb;
         quantRNAMatrix = new uint32_t *[r1.barcodeVector.size()];
-        for (uint16_t i = 0; i < r1.barcodeVector.size(); i++)
+        for (uint32_t i = 0; i < r1.barcodeVector.size(); i++)
         {
                 quantRNAMatrix[i] = new uint32_t[lddb.gene.size()];
                 for (uint32_t j=0;j< lddb.gene.size();j++){
@@ -28,7 +28,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         omp_set_dynamic(false);
         omp_set_num_threads(_thread);
         #pragma omp parallel for
-        for (uint16_t i = 0; i < r1.barcodeVector.size(); i++)
+        for (uint32_t i = 0; i < r1.barcodeVector.size(); i++)
         {
                 for (uint32_t j = 0; j < r2.readsPack[i].size(); j++)
                 {
@@ -53,7 +53,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         std::fprintf(fresult,"G/S");
 
         for (uint32_t i=0;i< r1.barcodeVector.size();i++){
-                std::fprintf(fresult, "\t%x",r1.barcodeVector[i]);
+                std::fprintf(fresult, "\t%lx",r1.barcodeVector[i]);
         }
         std::fprintf(fresult, "\n");
 
