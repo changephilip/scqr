@@ -142,10 +142,10 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
 {
         uint32_t start;
         uint32_t end;
-        start = lddb.index[key >> (64 - 8)];
-        if ((key >> 56) != 0xFF)
+        start = lddb.index[key >> (64 - 16)];
+        if ((key >> 48) != 0xFF)
         {
-                end = lddb.index[(key >> (64 - 8)) + 1];
+                end = lddb.index[(key >> (48)) + 1];
         }
         else
         {

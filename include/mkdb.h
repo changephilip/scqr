@@ -29,6 +29,7 @@ KSEQ_INIT(gzFile, gzread)
 #define rNATailLength 150
 //const uint32_t rNATailLength        = 150;
 const uint32_t kmerLength           = 32;
+const uint32_t indexSize = 0xFFFF;
 const uint64_t conversionTable[128] = {4,
                                        4,
                                        4,
@@ -290,7 +291,7 @@ class transcriptomeFa {
         std::vector<std::vector<uint64_t>> gene_T;
         std::vector<kmer_t>                geneKmerTable;
         std::vector<kmer_t>                contact;
-        uint32_t                           index[256];
+        uint32_t *                         index;
         uint32_t                           thread = 1;
 
         transcriptomeFa(const char* fa, uint32_t thread_);
@@ -539,9 +540,12 @@ void transcriptomeFa::mkdb()
 
 void transcriptomeFa::mkindex()
 {
-        uint32_t shiftSize = (sizeof(uint64_t) - sizeof(uint8_t)) * 8;
-        uint32_t index_stash[256];
-        for (uint32_t i = 0; i < 256; i++)
+        //uint32_t shiftSize = (sizeof(uint64_t) - sizeof(uint8_t)) * 8;
+        uint32_t shiftSize = 6 * 8;
+        uint32_t *index_stash;
+        index_stash = new uint32_t [ indexSize];
+        index = new uint32_t [indexSize];
+        for (uint32_t i = 0; i < indexSize; i++)
         {
                 index_stash[i] = 0;
                 index[i]       = 0;
@@ -553,10 +557,10 @@ void transcriptomeFa::mkindex()
                 index_stash[s]++;
         }
         //do prefix sum
-        uint32_t index_presum[256];
+        uint32_t index_presum[indexSize];
         index[0] = 0;
         //index[1] = index_stash[0];
-        for (uint32_t i = 1; i < 256; i++)
+        for (uint32_t i = 1; i < indexSize; i++)
         {
                 //index[i] += index_stash[i - 1];
                 index[i] = index[i - 1] + index_stash[i - 1];
@@ -601,7 +605,7 @@ void transcriptomeFa::clear()
 typedef struct
 {
         std::vector<kmer_t>      db;
-        uint32_t                 index[256];
+        uint32_t                 *index;
         std::vector<std::string> gene;
 } loadedDB;
 
@@ -624,7 +628,7 @@ void read_DB_Index(const std::string f_db,
         std::fclose(fdb);
 
         findex                = std::fopen(f_index.c_str(), "rb");
-        uint32_t index_length = 256;
+        uint32_t index_length = indexSize;
         std::fread(ldDB.index, sizeof(uint32_t), index_length, findex);
         std::fclose(findex);
 
