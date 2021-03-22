@@ -1,4 +1,5 @@
 #include "../include/mkdb.h"
+#include "../include/dkm.hpp"
 #include <stdint.h>
 
 #include <immintrin.h>
@@ -44,8 +45,9 @@ class rFirst {
         std::map<uint64_t, uint32_t> readsNameTable;
 
         std::vector<barcode_t> barcodeDataBase;
-        rFirst(const std::string r1gz);
+        rFirst(const std::string r1gz,uint32_t _labels);
         std::hash<std::string> stringHash;
+        uint32_t labels;
         void barcodeCorrect();
 };
 /*
@@ -103,14 +105,23 @@ void rFirst::barcodeCorrect(){
 }
 */
 
+void rFirst::barcodeCorrect(){
+        int N = barcodeSet.size();
+        std::vector<std::array<uint64_t,1>> data;
+        data = std::vector<std::array<uint64_t,1>>(barcodeSet.begin(),barcodeSet.end());
+        auto cluster_data = dkm::kmeans_lloyd(data,this->labels);
+        
+}
+
 /*
   filter unique tag(barcode + umi) and get these reads from R1
   save out these sample(barcode) id and transfer into 0-based index.
   How to find pair-end reads?
   construct readsNameTable with pair of (name.s , readId)
 */
-rFirst::rFirst(const std::string r1gz)
+rFirst::rFirst(const std::string r1gz,uint32_t _labels)
 {
+        this->labels = _labels;
         gzFile  fp;
         kseq_t *seq;
         int     l;
