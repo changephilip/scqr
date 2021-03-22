@@ -28,6 +28,22 @@ namespace details {
 /*
 Calculate the square of the distance between two points.
 */
+uint64_t distance_squared(const std::array<uint64_t, 1>& point_a,
+                          const std::array<uint64_t, 1>& point_b)
+{
+        uint64_t d_squared=0;
+        uint64_t a = point_a[0];
+        uint64_t b = point_b[0];
+        auto shift2bit = [](uint64_t &in,uint32_t x){return ((in <<(x*2))>>(64-x*2));};
+        for (uint32_t i = 0 ;i <32 ; i++){
+                d_squared += !(shift2bit(a, i) xor shift2bit(b, i));
+        }
+        if (d_squared > 2){
+                d_squared = 128;
+        }
+        return d_squared;
+}
+
 template <typename T, size_t N>
 T distance_squared(const std::array<T, N>& point_a, const std::array<T, N>& point_b) {
 	T d_squared = T();
@@ -37,6 +53,7 @@ T distance_squared(const std::array<T, N>& point_a, const std::array<T, N>& poin
 	}
 	return d_squared;
 }
+
 
 template <typename T, size_t N>
 T distance(const std::array<T, N>& point_a, const std::array<T, N>& point_b) {
