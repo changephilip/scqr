@@ -1,6 +1,6 @@
 #include "../include/mkdb.h"
 //#include "../include/dkm.hpp"
-#include "../include/dkm_parallel.hpp"
+//#include "../include/dkm_parallel.hpp"
 #include <stdint.h>
 
 #include <immintrin.h>
@@ -108,6 +108,34 @@ void rFirst::barcodeCorrect(){
         auto clusters = dbscan.Clusters;
 }
 */
+typedef struct
+{
+        barcode_t sample;
+        uint32_t  count;
+        barcode_t _sample;
+        uint32_t  _count;
+} barcodeCount_t;
+
+inline uint64_t shift2bit(barcode_t &in, uint32_t x)
+{
+        return ((in >> (62 - x * 2)) & 3U);
+}
+inline bool compareBarcode(barcode_t &a, barcode_t &b)
+{
+        uint32_t d;
+        for (uint32_t i = 0; i < 32; i++)
+        {
+                if (_mm_popcnt_u64(shift2bit(a, i) xor shift2bit(b, i)) > 0)
+                {
+                        d++;
+                }
+        }
+        if (d > 3)
+        {
+                return false;
+        }
+        return true;
+}
 
 void rFirst::barcodeCorrect()
 {
@@ -117,24 +145,76 @@ void rFirst::barcodeCorrect()
         {
                 data.push_back(std::array<uint64_t, 1>{item});
         }
-        std::vector<std::pair<barcode_t, uint32_t>> barcodeCountVector;
-        barcodeCountVector.resize(barcodeCount.size());
-        std::copy(barcodeCount.begin(), barcodeCount.end(), barcodeCountVector.begin());
-        std::sort(barcodeVector.begin(),
-                  barcodeVector.end(),
-                  [](std::pair<barcode_t, uint32_t> &left,
-                     std::pair<barcode_t, uint32_t> &right) {
-                          return left.second < right.second;
+        std::vector<barcodeCount_t> barcodeCountVector;
+        for (auto item : barcodeCount)
+        {
+                barcodeCount_t t;
+                t.sample  = item.first;
+                t._sample = t.sample;
+                t.count   = item.second;
+                barcodeCountVector.emplace_back(t);
+        }
+        /*
+        std::sort(barcodeCountVector.begin(),
+                  barcodeCountVector.end(),
+                  [](barcodeCount_t &left, barcodeCount_t &right) {
+                          return left.count < right.count;
                   });
         FILE *f;
-        f=std::fopen("R1_Statistic.txt","w");
-        for (auto item : barcodeCountVector){
-                std::fprintf(f, "%lu\t%d\n",item.first,item.second);
+        f = std::fopen("R1_Statistic.txt", "w");
+        for (auto item : barcodeCountVector)
+        {
+                std::fprintf(f, "%lu\t%d\n", item.sample, item.count);
         }
         std::fclose(f);
+        */
         //data = std::vector<std::array<uint64_t,1>>(barcodeSet.begin(),barcodeSet.end());
         // auto cluster_data = dkm::kmeans_lloyd(data, this->labels);
         //auto t            = cluster_data;
+        std::vector<uint32_t> top;
+        std::vector<uint32_t> buttom;
+        uint32_t              threshold = 128;
+        for (uint32_t i = 0; i < barcodeCountVector.size(); i++)
+        {
+                if (barcodeCountVector[i].count > threshold)
+                {
+                        top.push_back(i);
+                }
+                else
+                {
+                        buttom.push_back(i);
+                }
+        }
+
+        for (uint32_t i = 0; i < top.size(); i++)
+        {
+#pragma omp parallel for
+                for (uint32_t j = 1; j < top.size(); j++)
+                {
+                        if (compareBarcode(barcodeCountVector[i]._sample,
+                                           barcodeCountVector[j]._sample))
+                        {
+#pragma omp critical
+                                {
+                                        if (barcodeCountVector[i]._count >
+                                            barcodeCountVector[j]._count)
+                                        {
+                                                barcodeCountVector[j]._sample =
+                                                        barcodeCountVector[i]._sample;
+                                                barcodeCountVector[j]._count =
+                                                        barcodeCountVector[i]._count;
+                                        }
+                                        else
+                                        {
+                                                barcodeCountVector[i]._sample =
+                                                        barcodeCountVector[j]._sample;
+                                                barcodeCountVector[i]._count =
+                                                        barcodeCountVector[j]._count;
+                                        }
+                                }
+                        }
+                }
+        }
 }
 
 /*
