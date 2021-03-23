@@ -1,11 +1,12 @@
 #include "../include/mkdb.h"
-#include "../include/dkm.hpp"
+//#include "../include/dkm.hpp"
+#include "../include/dkm_parallel.hpp"
 #include <stdint.h>
 
 #include <immintrin.h>
 #include <popcntintrin.h>
 
-#define _RUNMODE_ 0
+#define _RUNMODE_ 1
 #if ((_RUNMODE_))
 const uint32_t barcode = 0x10;
 const uint32_t umi     = 0xC;
@@ -14,8 +15,8 @@ const uint32_t barcode = 0x8;
 const uint32_t umi     = 0x6;
 #endif
 
-const uint32_t polyT = 0x8;
-const uint32_t polyTMask = 0xFFFF;
+const uint32_t polyT      = 0x8;
+const uint32_t polyTMask  = 0xFFFF;
 const uint32_t polyTMask1 = 0xFFF0;
 #define jumpbit 0
 
@@ -27,7 +28,7 @@ typedef struct
 {
         //tag_t tag;
         //uint32_t id;
-        umi_t umi;
+        umi_t     umi;
         barcode_t sample; //barcode
         //std::string pair1;
 } rOneRead;
@@ -36,19 +37,20 @@ class rFirst {
        public:
         /*a unique identifier, tag=[barcode]+[umi]*/
         std::vector<rOneRead> reads;
-        std::set<barcode_t>    barcodeSet;
+        std::set<barcode_t>   barcodeSet;
         /*assign 0-based id for each sample*/
         std::map<barcode_t, uint32_t> barcodeMapList;
         /*get origin sampleId(barcode) with index*/
-        std::vector<barcode_t> barcodeVector;
+        std::vector<barcode_t>        barcodeVector;
+        std::map<barcode_t, uint32_t> barcodeCount;
         /*store pair1 string for R2 search for the paired reads R1 readId*/
         std::map<uint64_t, uint32_t> readsNameTable;
 
         std::vector<barcode_t> barcodeDataBase;
-        rFirst(const std::string r1gz,uint32_t _labels);
+        rFirst(const std::string r1gz, uint32_t _labels);
         std::hash<std::string> stringHash;
-        uint32_t labels;
-        void barcodeCorrect();
+        uint32_t               labels;
+        void                   barcodeCorrect();
 };
 /*
 template<class T>
@@ -67,12 +69,12 @@ inline barcode_t readBarcode(const char *seq)
 
 inline umi_t readUmi(const char *seq)
 {
-        return (umi_t)baseToBinaryForward(seq + barcode + jumpbit , umi);
+        return (umi_t)baseToBinaryForward(seq + barcode + jumpbit, umi);
 }
 
 inline tag_t readTag(const char *seq)
 {
-        return (tag_t)baseToBinaryForward(seq + jumpbit , umi + barcode);
+        return (tag_t)baseToBinaryForward(seq + jumpbit, umi + barcode);
 }
 
 /*
@@ -107,16 +109,32 @@ void rFirst::barcodeCorrect(){
 }
 */
 
-void rFirst::barcodeCorrect(){
-        int N = barcodeSet.size();
-        std::vector<std::array<uint64_t,1>> data;
-        for (auto item :barcodeSet){
-                data.push_back(std::array<uint64_t,1>{item});
+void rFirst::barcodeCorrect()
+{
+        int                                  N = barcodeSet.size();
+        std::vector<std::array<uint64_t, 1>> data;
+        for (auto item : barcodeSet)
+        {
+                data.push_back(std::array<uint64_t, 1>{item});
         }
+        std::vector<std::pair<barcode_t, uint32_t>> barcodeCountVector;
+        barcodeCountVector.resize(barcodeCount.size());
+        std::copy(barcodeCount.begin(), barcodeCount.end(), barcodeCountVector.begin());
+        std::sort(barcodeVector.begin(),
+                  barcodeVector.end(),
+                  [](std::pair<barcode_t, uint32_t> &left,
+                     std::pair<barcode_t, uint32_t> &right) {
+                          return left.second < right.second;
+                  });
+        FILE *f;
+        f=std::fopen("R1_Statistic.txt","w");
+        for (auto item : barcodeCountVector){
+                std::fprintf(f, "%lu\t%d\n",item.first,item.second);
+        }
+        std::fclose(f);
         //data = std::vector<std::array<uint64_t,1>>(barcodeSet.begin(),barcodeSet.end());
-        auto cluster_data = dkm::kmeans_lloyd(data,this->labels);
-        auto t = cluster_data;
-        
+        // auto cluster_data = dkm::kmeans_lloyd(data, this->labels);
+        //auto t            = cluster_data;
 }
 
 /*
@@ -125,7 +143,7 @@ void rFirst::barcodeCorrect(){
   How to find pair-end reads?
   construct readsNameTable with pair of (name.s , readId)
 */
-rFirst::rFirst(const std::string r1gz,uint32_t _labels)
+rFirst::rFirst(const std::string r1gz, uint32_t _labels)
 {
         this->labels = _labels;
         gzFile  fp;
@@ -135,14 +153,23 @@ rFirst::rFirst(const std::string r1gz,uint32_t _labels)
         seq             = kseq_init(fp);
         uint32_t readId = 0;
 
-        std::vector<std::pair<uint64_t,uint32_t>> readsNameVector;
-        std::time_t t = std::time(nullptr);
+        std::vector<std::pair<uint64_t, uint32_t>> readsNameVector;
+        std::time_t                                t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tStart of R1 " << std::endl;
 
         while ((l = kseq_read(seq)) >= 0)
         {
                 barcode_t thisbarcode = readBarcode(seq->seq.s);
-                umi_t thisumi     = readUmi(seq->seq.s);
+                umi_t     thisumi     = readUmi(seq->seq.s);
+                if (barcodeCount.find(thisbarcode) != barcodeCount.end())
+                {
+                        barcodeCount.find(thisbarcode)->second++;
+                }
+                else
+                {
+                        barcodeCount.insert(
+                                std::pair<barcode_t, uint32_t>(thisbarcode, 1));
+                }
                 //uint32_t thistag     = ((uint32_t)thisbarcode << 12) || (0x0u || thisumi);
                 {
                         rOneRead tmpRead;
@@ -158,25 +185,25 @@ rFirst::rFirst(const std::string r1gz,uint32_t _labels)
                         */
                         //readsNameVector.push_back(std::make_pair(seq->name.s, readId));
                         //readsNameVector.push_back(std::make_pair(std::hash<std::string>{}(seq->name.s),readId));
-                        readsNameVector.push_back(std::make_pair(stringHash(seq->name.s),readId));
+                        readsNameVector.push_back(
+                                std::make_pair(stringHash(seq->name.s), readId));
                         readId++;
                 }
                 //readId++;
         }
-        
-        readsNameTable = std::map<uint64_t,uint32_t>(readsNameVector.begin(),readsNameVector.end());
+
+        readsNameTable = std::map<uint64_t, uint32_t>(readsNameVector.begin(),
+                                                      readsNameVector.end());
 
         readsNameVector.resize(0);
         readsNameVector.clear();
-
-
 
         std::cout << reads.size() << std::endl;
         std::cout << barcodeSet.size() << std::endl;
         // reads.size() >> seqId.size()
         //assert(reads.size() == seqId.size());
         barcodeCorrect();
-        auto     it = barcodeSet.begin();
+        auto      it    = barcodeSet.begin();
         barcode_t count = 0;
         while (it != barcodeSet.end())
         {
@@ -191,14 +218,13 @@ rFirst::rFirst(const std::string r1gz,uint32_t _labels)
         //        read.sample = sampleList.find(read.tag >> 12)->second;
         //}
 
-        #pragma omp parallel for
-        for (uint32_t i=0;i< reads.size();i++){
+#pragma omp parallel for
+        for (uint32_t i = 0; i < reads.size(); i++)
+        {
                 //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
                 reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
         }
 
         t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R1 " << std::endl;
-
-
 }

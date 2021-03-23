@@ -4,6 +4,7 @@
 
 int main(int argc, char *argv[])
 {
+        /*
         if (argv[1] != NULL and std::atoi(argv[2]))
         {
                 //        transcriptomeFa t(argv[1], 8);
@@ -12,6 +13,7 @@ int main(int argc, char *argv[])
         {
                 exit(EXIT_FAILURE);
         }
+        */
         int mode = std::atoi(argv[1]);
         if (argv[1] != NULL)
         {
@@ -24,7 +26,7 @@ int main(int argc, char *argv[])
                 case 2: {
                         loadedDB lldb;
                         read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", lldb);
-                        rFirst  r1(argv[2]);
+                        rFirst  r1(argv[2],4000);
                         rSecond r2(argv[3], r1);
                         rQuery  rQ(r1, r2, lldb, 32, argv[4]);
                         break;
