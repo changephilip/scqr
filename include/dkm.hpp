@@ -14,6 +14,9 @@
 #include <type_traits>
 #include <vector>
 
+#include <immintrin.h>
+#include <popcntintrin.h>
+
 /*
 DKM - A k-means implementation that is generic across variable data dimensions.
 */
@@ -34,13 +37,24 @@ uint64_t distance_squared(const std::array<uint64_t, 1>& point_a,
         uint64_t d_squared=0;
         uint64_t a = point_a[0];
         uint64_t b = point_b[0];
-        auto shift2bit = [](uint64_t &in,uint32_t x){return ((in <<(x*2))>>(64-x*2));};
-        for (uint32_t i = 0 ;i <32 ; i++){
-                d_squared += !(shift2bit(a, i) xor shift2bit(b, i));
+        auto shift2bit = [](uint64_t &in ,uint32_t x) { return ((in >> (62-x*2)) & 3U );};
+        /*
+        uint64_t s= 0xabcdef12;
+        printf("0xABCDEF12\n");
+        for (uint32_t i=0;i < 32;i++){
+                printf("%lu\n",shift2bit(s, i));
         }
+        */
+        for (uint32_t i = 0 ;i <32 ; i++){
+                if (_mm_popcnt_u64(shift2bit(a, i) xor shift2bit(b, i)) > 0){
+                        d_squared ++;
+                }
+        }
+        /*
         if (d_squared > 2){
                 d_squared = 128;
-        }
+                }
+        */
         return d_squared;
 }
 

@@ -25,7 +25,7 @@ typedef uint64_t barcode_t;
 
 typedef struct
 {
-        tag_t tag;
+        //tag_t tag;
         //uint32_t id;
         umi_t umi;
         barcode_t sample; //barcode
@@ -75,6 +75,7 @@ inline tag_t readTag(const char *seq)
         return (tag_t)baseToBinaryForward(seq + jumpbit , umi + barcode);
 }
 
+/*
 inline uint64_t  checkPolyT(const char *seq){
         uint64_t T = baseToBinaryForward(seq + jumpbit + umi +barcode, polyT);
         T |= 0ULL;
@@ -92,6 +93,7 @@ inline uint64_t  checkPolyT(const char *seq){
         }
         return 0;
 }
+*/
 
 /*
 void rFirst::barcodeCorrect(){
@@ -108,8 +110,12 @@ void rFirst::barcodeCorrect(){
 void rFirst::barcodeCorrect(){
         int N = barcodeSet.size();
         std::vector<std::array<uint64_t,1>> data;
-        data = std::vector<std::array<uint64_t,1>>(barcodeSet.begin(),barcodeSet.end());
+        for (auto item :barcodeSet){
+                data.push_back(std::array<uint64_t,1>{item});
+        }
+        //data = std::vector<std::array<uint64_t,1>>(barcodeSet.begin(),barcodeSet.end());
         auto cluster_data = dkm::kmeans_lloyd(data,this->labels);
+        auto t = cluster_data;
         
 }
 
@@ -169,7 +175,7 @@ rFirst::rFirst(const std::string r1gz,uint32_t _labels)
         std::cout << barcodeSet.size() << std::endl;
         // reads.size() >> seqId.size()
         //assert(reads.size() == seqId.size());
-
+        barcodeCorrect();
         auto     it = barcodeSet.begin();
         barcode_t count = 0;
         while (it != barcodeSet.end())
@@ -187,7 +193,8 @@ rFirst::rFirst(const std::string r1gz,uint32_t _labels)
 
         #pragma omp parallel for
         for (uint32_t i=0;i< reads.size();i++){
-                reads[i].sample = barcodeMapList.find(reads[i].tag >> 12)->second;
+                //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
+                reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
         }
 
         t = std::time(nullptr);
