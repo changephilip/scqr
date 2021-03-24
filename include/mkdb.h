@@ -29,7 +29,7 @@ KSEQ_INIT(gzFile, gzread)
 #define rNATailLength 150
 //const uint32_t rNATailLength        = 150;
 const uint32_t kmerLength           = 32;
-const uint32_t indexSize = 0xFFFF;
+const uint32_t indexSize            = 0xFFFF;
 const uint64_t conversionTable[128] = {0,
                                        0,
                                        0,
@@ -97,13 +97,13 @@ const uint64_t conversionTable[128] = {0,
                                        0,
                                        //64 A=65,C=67,G=71,T=84
                                        0,
-                                       0,//A
+                                       0, //A
                                        0,
-                                       1,//C
+                                       1, //C
                                        0,
                                        0,
                                        0,
-                                       2,//G
+                                       2, //G
                                        0,
                                        0,
                                        0,
@@ -117,7 +117,7 @@ const uint64_t conversionTable[128] = {0,
                                        0,
                                        0,
                                        0,
-                                       3,//T
+                                       3, //T
                                        0,
                                        0,
                                        0,
@@ -131,13 +131,13 @@ const uint64_t conversionTable[128] = {0,
                                        0,
                                        //96 a=97,c=99,g=103,t=116
                                        0,
-                                       0,//A
+                                       0, //A
                                        0,
-                                       1,//C
+                                       1, //C
                                        0,
                                        0,
                                        0,
-                                       2,//G
+                                       2, //G
                                        0,
                                        0,
                                        0,
@@ -151,7 +151,7 @@ const uint64_t conversionTable[128] = {0,
                                        0,
                                        0,
                                        0,
-                                       3,//T
+                                       3, //T
                                        0,
                                        0,
                                        0,
@@ -178,9 +178,10 @@ enum baseType
         G,
         N,
         T
-        
+
 };
-enum baseTypel{
+enum baseTypel
+{
         a,
         c,
         g,
@@ -200,16 +201,17 @@ typedef struct
         uint32_t    geneId;
 } transFa;
 
-inline uint64_t baseToBinaryForward_Barcode(const char *seq, uint64_t length){
+inline uint64_t baseToBinaryForward_Barcode(const char* seq, uint64_t length)
+{
         assert(length <= 21);
-        uint64_t p =0 ;
-        uint64_t bitwidth  = (length -1) * 3;
-        uint64_t tmp = 0ULL;
+        uint64_t p        = 0;
+        uint64_t bitwidth = (length - 1) * 3;
+        uint64_t tmp      = 0ULL;
         while (p < length)
         {
-                tmp|= (conversionTable[seq[p]] << bitwidth);
+                tmp |= (conversionTable[seq[p]] << bitwidth);
                 p++;
-                bitwidth -=3;
+                bitwidth -= 3;
         }
         return tmp;
 }
@@ -291,7 +293,7 @@ class transcriptomeFa {
         std::vector<std::vector<uint64_t>> gene_T;
         std::vector<kmer_t>                geneKmerTable;
         std::vector<kmer_t>                contact;
-        uint32_t *                         index;
+        uint32_t*                          index;
         uint32_t                           thread = 1;
 
         transcriptomeFa(const char* fa, uint32_t thread_);
@@ -541,10 +543,10 @@ void transcriptomeFa::mkdb()
 void transcriptomeFa::mkindex()
 {
         //uint32_t shiftSize = (sizeof(uint64_t) - sizeof(uint8_t)) * 8;
-        uint32_t shiftSize = 6 * 8;
-        uint32_t *index_stash;
-        index_stash = new uint32_t [ indexSize];
-        index = new uint32_t [indexSize];
+        uint32_t  shiftSize = 6 * 8;
+        uint32_t* index_stash;
+        index_stash = new uint32_t[indexSize];
+        index       = new uint32_t[indexSize];
         for (uint32_t i = 0; i < indexSize; i++)
         {
                 index_stash[i] = 0;
@@ -605,7 +607,7 @@ void transcriptomeFa::clear()
 typedef struct
 {
         std::vector<kmer_t>      db;
-        uint32_t                 *index;
+        uint32_t*                index;
         std::vector<std::string> gene;
 } loadedDB;
 

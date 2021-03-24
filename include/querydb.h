@@ -15,8 +15,8 @@ class rQuery {
 rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32_t _thread, const std::string &result)
 {
         mydb           = lddb;
-        quantRNAMatrix = new uint32_t *[r1.barcodeVector.size()];
-        for (uint32_t i = 0; i < r1.barcodeVector.size(); i++)
+        quantRNAMatrix = new uint32_t *[r1.correctedBarcodeVector.size()];
+        for (uint32_t i = 0; i < r1.correctedBarcodeVector.size(); i++)
         {
                 quantRNAMatrix[i] = new uint32_t[lddb.gene.size()];
                 for (uint32_t j=0;j< lddb.gene.size();j++){
@@ -24,11 +24,11 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
                 }
         }
         std::cout << "GENE LIST LENGTH is " << lddb.gene.size() << std::endl;
-        std::cout << "Num of Barcode(sample) is " << r1.barcodeVector.size() << std::endl;
+        std::cout << "Num of Barcode(sample) is " << r1.correctedBarcodeVector.size() << std::endl;
         omp_set_dynamic(false);
         omp_set_num_threads(_thread);
         #pragma omp parallel for
-        for (uint32_t i = 0; i < r1.barcodeVector.size(); i++)
+        for (uint32_t i = 0; i < r1.correctedBarcodeVector.size(); i++)
         {
                 for (uint32_t j = 0; j < r2.readsPack[i].size(); j++)
                 {
@@ -52,14 +52,14 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         //header
         std::fprintf(fresult,"G/S");
 
-        for (uint32_t i=0;i< r1.barcodeVector.size();i++){
-                std::fprintf(fresult, "\t%lx",r1.barcodeVector[i]);
+        for (uint32_t i=0;i< r1.correctedBarcodeVector.size();i++){
+                std::fprintf(fresult, "\t%lx",r1.correctedBarcodeVector[i]);
         }
         std::fprintf(fresult, "\n");
 
         for (uint32_t i=0;i < lddb.gene.size();i++){
                 std::fprintf(fresult, "%s",lddb.gene[i].c_str());
-                for (uint32_t j=0;j< r1.barcodeVector.size();j++){
+                for (uint32_t j=0;j< r1.correctedBarcodeVector.size();j++){
                         std::fprintf(fresult, "\t%d",quantRNAMatrix[j][i]);
                 }
                 std::fprintf(fresult, "\n");
@@ -74,7 +74,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         */
         std::fclose(fresult);
 
-        for (uint32_t i=0;i< r1.barcodeVector.size();i++){
+        for (uint32_t i=0;i< r1.correctedBarcodeVector.size();i++){
                 delete[] quantRNAMatrix[i];
         }
         delete[] quantRNAMatrix;

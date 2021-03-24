@@ -39,14 +39,13 @@ class rFirst {
         std::vector<rOneRead> reads;
         std::set<barcode_t>   barcodeSet;
         /*assign 0-based id for each sample*/
-        std::map<barcode_t, uint32_t> barcodeMapList;
+        std::map<barcode_t, uint32_t> correctedBarcodeMapList;
         /*get origin sampleId(barcode) with index*/
-        std::vector<barcode_t>        barcodeVector;
+        std::vector<barcode_t>        correctedBarcodeVector;
         std::map<barcode_t, uint32_t> barcodeCount;
         /*store pair1 string for R2 search for the paired reads R1 readId*/
         std::map<uint64_t, uint32_t> readsNameTable;
 
-        std::vector<barcode_t> barcodeDataBase;
         rFirst(const std::string r1gz, uint32_t _labels);
         std::hash<std::string> stringHash;
         uint32_t               labels;
@@ -128,9 +127,12 @@ inline bool compareBarcode(barcode_t &a, barcode_t &b)
                 if (_mm_popcnt_u64(shift2bit(a, i) xor shift2bit(b, i)) > 0)
                 {
                         d++;
+                        if (d > 2){
+                                return false;
+                        }
                 }
         }
-        if (d > 3)
+        if (d > 2)
         {
                 return false;
         }
@@ -174,6 +176,7 @@ void rFirst::barcodeCorrect()
         std::vector<uint32_t> top;
         std::vector<uint32_t> buttom;
         uint32_t              threshold = 128;
+        // split all barcode into top(>128) and buttom (<128)
         for (uint32_t i = 0; i < barcodeCountVector.size(); i++)
         {
                 if (barcodeCountVector[i].count > threshold)
@@ -185,35 +188,96 @@ void rFirst::barcodeCorrect()
                         buttom.push_back(i);
                 }
         }
-
+        
+        //find duplicate in top
         for (uint32_t i = 0; i < top.size(); i++)
         {
 #pragma omp parallel for
-                for (uint32_t j = 1; j < top.size(); j++)
+                for (uint32_t j = i + 1; j < top.size(); j++)
                 {
-                        if (compareBarcode(barcodeCountVector[i]._sample,
-                                           barcodeCountVector[j]._sample))
+                        if (compareBarcode(barcodeCountVector[top[i]]._sample,
+                                           barcodeCountVector[top[j]]._sample))
                         {
 #pragma omp critical
                                 {
-                                        if (barcodeCountVector[i]._count >
-                                            barcodeCountVector[j]._count)
+                                        if (barcodeCountVector[top[i]]._count >
+                                            barcodeCountVector[top[j]]._count)
                                         {
-                                                barcodeCountVector[j]._sample =
-                                                        barcodeCountVector[i]._sample;
-                                                barcodeCountVector[j]._count =
-                                                        barcodeCountVector[i]._count;
+                                                barcodeCountVector[top[j]]._sample =
+                                                        barcodeCountVector[top[i]]
+                                                                ._sample;
+                                                barcodeCountVector[top[j]]._count =
+                                                        barcodeCountVector[top[i]]._count;
                                         }
                                         else
                                         {
-                                                barcodeCountVector[i]._sample =
-                                                        barcodeCountVector[j]._sample;
-                                                barcodeCountVector[i]._count =
-                                                        barcodeCountVector[j]._count;
+                                                barcodeCountVector[top[i]]._sample =
+                                                        barcodeCountVector[top[j]]
+                                                                ._sample;
+                                                barcodeCountVector[top[i]]._count =
+                                                        barcodeCountVector[top[j]]._count;
                                         }
                                 }
                         }
                 }
+        }
+        //merge duplicate into compact
+        std::vector<uint32_t> compact;
+        for (uint32_t i = 0; i < barcodeCountVector.size(); i++)
+        {
+                if (barcodeCountVector[i]._sample == barcodeCountVector[i].sample)
+                {
+                        compact.push_back(i);
+                }
+        }
+
+        //find and merge duplicate from buttom into compact
+        //rewrite its _sample with _sample from top
+        for (uint32_t i = 0; i < buttom.size(); i++)
+        {
+                for (uint32_t j = 0; j < compact.size(); j++)
+                {
+                        if (compareBarcode(barcodeCountVector[buttom[i]]._sample,
+                                           barcodeCountVector[compact[j]]._sample))
+                        {
+                                barcodeCountVector[buttom[i]]._sample =
+                                        barcodeCountVector[compact[j]]._sample;
+                                barcodeCountVector[buttom[i]]._count =
+                                        barcodeCountVector[compact[j]]._count;
+                                break;
+                        }
+                }
+        }
+
+        //generate the map from origin sample to corrected sample
+        std::map<barcode_t, barcode_t> reMapToBarcode;
+        for (auto item : barcodeCountVector)
+        {
+                reMapToBarcode.insert(
+                        std::pair<barcode_t, barcode_t>(item.sample, item._sample));
+        }
+        std::set<barcode_t> compactSet;
+        for (auto i : compact)
+        {
+                compactSet.insert(barcodeCountVector[i].sample);
+        }
+        auto     it    = compactSet.begin();
+        uint32_t count = 0;
+        while (it != compactSet.end())
+        {
+                correctedBarcodeMapList.insert(std::pair<barcode_t, uint32_t>(*it, count));
+                it++;
+                count++;
+                correctedBarcodeVector.push_back(*it);
+        }
+#pragma omp parallel for
+        for (uint32_t i = 0; i < reads.size(); i++)
+        {
+                //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
+                //reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
+                reads[i].sample =
+                        correctedBarcodeMapList.find(reMapToBarcode.find(reads[i].sample)->second)
+                                ->second;
         }
 }
 
@@ -283,27 +347,11 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels)
         // reads.size() >> seqId.size()
         //assert(reads.size() == seqId.size());
         barcodeCorrect();
-        auto      it    = barcodeSet.begin();
-        barcode_t count = 0;
-        while (it != barcodeSet.end())
-        {
-                barcodeMapList.insert(std::pair<barcode_t, uint32_t>(*it, count));
-                barcodeVector.push_back(*it);
-                it++;
-                count++;
-        }
 
         //for (auto &read : reads)
         //{
         //        read.sample = sampleList.find(read.tag >> 12)->second;
         //}
-
-#pragma omp parallel for
-        for (uint32_t i = 0; i < reads.size(); i++)
-        {
-                //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
-                reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
-        }
 
         t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R1 " << std::endl;

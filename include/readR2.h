@@ -28,7 +28,7 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
         std::time_t t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tStart of R2 " << std::endl;
 
-        readsPack.resize(rfirst.barcodeVector.size());
+        readsPack.resize(rfirst.correctedBarcodeVector.size());
         while (( l = kseq_read(seq)) >=0){
                 auto nameHash = rfirst.stringHash(seq->name.s);
                 if (rfirst.readsNameTable.find(nameHash)!= rfirst.readsNameTable.end()){
