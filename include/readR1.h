@@ -50,6 +50,7 @@ class rFirst {
         /*get origin sampleId(barcode) with index*/
         std::vector<barcode_t>        correctedBarcodeVector;
         std::map<barcode_t, uint32_t> barcodeCount;
+        std::vector<uint32_t>         cellReadsCount;
         /*store pair1 string for R2 search for the paired reads R1 readId*/
         std::map<uint64_t, uint32_t> readsNameTable;
 
@@ -183,6 +184,8 @@ void rFirst::transform(std::vector<barcodeCount_t> &in,
                         return;
                 }
         }
+        //in[src[i]]._sample = 0xFFFFFFFF;
+        in[src[i]]._count = 0;
 }
 
 void rFirst::barcodeCorrect()
@@ -292,34 +295,36 @@ void rFirst::barcodeCorrect()
         for (uint32_t i = 0; i < buttom.size(); i++)
         {
                 transform(barcodeCountVector, buttom, compact, i);
-                /*
-                for (uint32_t j = 0; j < compact.size(); j++)
-                {
-                        if (compareBarcode(barcodeCountVector[buttom[i]]._sample,
-                                           barcodeCountVector[compact[j]]._sample))
-                        {
-                                barcodeCountVector[buttom[i]]._sample =
-                                        barcodeCountVector[compact[j]]._sample;
-                                barcodeCountVector[buttom[i]]._count =
-                                        barcodeCountVector[compact[j]]._count;
-                                break;
-                        }
+        }
+        //check homeless barcode
+        std::vector<barcode_t> cellLess;
+        uint32_t cellLessCount=0;
+        for (uint32_t i=0;i<buttom.size();i++){
+                if(barcodeCountVector[buttom[i]]._count ==0){
+
+                        cellLess.push_back(barcodeCountVector[buttom[i]].sample);
+                        cellLessCount += barcodeCountVector[buttom[i]].count;
                 }
-                */
         }
 
         //generate the map from origin sample to corrected sample
         std::map<barcode_t, barcode_t> reMapToBarcode;
         for (auto item : barcodeCountVector)
         {
-                reMapToBarcode.insert(
-                        std::pair<barcode_t, barcode_t>(item.sample, item._sample));
+                if (item._count != 0)
+                {
+                        reMapToBarcode.insert(std::pair<barcode_t, barcode_t>(
+                                item.sample, item._sample));
+                }
         }
+        // generate cell set 
         std::set<barcode_t> compactSet;
         for (auto i : compact)
         {
                 compactSet.insert(barcodeCountVector[i].sample);
         }
+
+        // assign a cell id for each cell start from 0
         auto     it    = compactSet.begin();
         uint32_t count = 0;
         while (it != compactSet.end())
@@ -330,15 +335,27 @@ void rFirst::barcodeCorrect()
                 count++;
                 correctedBarcodeVector.push_back(*it);
         }
+        //assgin barcode id for each read
 #pragma omp parallel for
         for (uint32_t i = 0; i < reads.size(); i++)
         {
                 //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
                 //reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
-                reads[i].sample =
-                        correctedBarcodeMapList
-                                .find(reMapToBarcode.find(reads[i].sample)->second)
-                                ->second;
+                auto it =  correctedBarcodeMapList.find(reads[i].sample);
+                if (it != correctedBarcodeMapList.end())
+                {
+                        reads[i].sample =
+                                correctedBarcodeMapList
+                                        .find(reMapToBarcode.find(reads[i].sample)
+                                                      ->second)
+                                        ->second;
+                }
+        }
+
+        //calculate reads in every cell
+
+        for (auto item : barcodeCountVector)
+        {
         }
 }
 
