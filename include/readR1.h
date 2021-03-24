@@ -32,6 +32,13 @@ typedef struct
         barcode_t sample; //barcode
         //std::string pair1;
 } rOneRead;
+typedef struct
+{
+        barcode_t sample;
+        uint32_t  count;
+        barcode_t _sample;
+        uint32_t  _count;
+} barcodeCount_t;
 
 class rFirst {
        public:
@@ -49,6 +56,14 @@ class rFirst {
         rFirst(const std::string r1gz, uint32_t _labels);
         std::hash<std::string> stringHash;
         uint32_t               labels;
+        inline void            exchange(std::vector<barcodeCount_t> &in,
+                                        std::vector<uint32_t> &      top,
+                                        uint32_t                     i,
+                                        uint32_t                     j);
+        inline void            transform(std::vector<barcodeCount_t> &in,
+                                         std::vector<uint32_t> &      src,
+                                         std::vector<uint32_t> &      dst,
+                                         uint32_t                     i);
         void                   barcodeCorrect();
 };
 /*
@@ -107,46 +122,79 @@ void rFirst::barcodeCorrect(){
         auto clusters = dbscan.Clusters;
 }
 */
-typedef struct
-{
-        barcode_t sample;
-        uint32_t  count;
-        barcode_t _sample;
-        uint32_t  _count;
-} barcodeCount_t;
-
 inline uint64_t shift2bit(barcode_t &in, uint32_t x)
 {
         return ((in >> (62 - x * 2)) & 3U);
 }
 inline bool compareBarcode(barcode_t &a, barcode_t &b)
 {
-        uint32_t d;
+        uint32_t d = 0;
         for (uint32_t i = 0; i < 32; i++)
         {
                 if (_mm_popcnt_u64(shift2bit(a, i) xor shift2bit(b, i)) > 0)
                 {
                         d++;
-                        if (d > 2){
+                        if (d > 4)
+                        {
                                 return false;
                         }
                 }
         }
-        if (d > 2)
+        if (d > 4)
         {
                 return false;
         }
         return true;
 }
 
+inline void rFirst::exchange(std::vector<barcodeCount_t> &in,
+                             std::vector<uint32_t> &      top,
+                             uint32_t                     i,
+                             uint32_t                     j)
+{
+        if (compareBarcode(in[top[i]]._sample, in[top[j]]._sample))
+        {
+                {
+                        if (in[top[i]]._count > in[top[j]]._count)
+                        {
+                                in[top[j]]._sample = in[top[i]]._sample;
+                                in[top[j]]._count  = in[top[i]]._count;
+                        }
+                        else
+                        {
+                                in[top[i]]._sample = in[top[j]]._sample;
+                                in[top[i]]._count  = in[top[j]]._count;
+                        }
+                }
+        }
+}
+
+void rFirst::transform(std::vector<barcodeCount_t> &in,
+                       std::vector<uint32_t> &      src,
+                       std::vector<uint32_t> &      dst,
+                       uint32_t                     i)
+{
+        for (uint32_t j = 0; j < dst.size(); j++)
+        {
+                if (compareBarcode(in[src[i]]._sample, in[dst[j]]._sample))
+                {
+                        in[src[i]]._sample = in[dst[j]]._sample;
+                        in[src[i]]._count  = in[dst[j]]._count;
+                        return;
+                }
+        }
+}
+
 void rFirst::barcodeCorrect()
 {
+        /*
         int                                  N = barcodeSet.size();
         std::vector<std::array<uint64_t, 1>> data;
         for (auto item : barcodeSet)
         {
                 data.push_back(std::array<uint64_t, 1>{item});
         }
+        */
         std::vector<barcodeCount_t> barcodeCountVector;
         for (auto item : barcodeCount)
         {
@@ -154,8 +202,14 @@ void rFirst::barcodeCorrect()
                 t.sample  = item.first;
                 t._sample = t.sample;
                 t.count   = item.second;
+                t._count  = t.count;
                 barcodeCountVector.emplace_back(t);
         }
+        __gnu_parallel::sort(barcodeCountVector.begin(),
+                             barcodeCountVector.end(),
+                             [](barcodeCount_t left, barcodeCount_t right) {
+                                     return left.count < right.count;
+                             });
         /*
         std::sort(barcodeCountVector.begin(),
                   barcodeCountVector.end(),
@@ -188,7 +242,7 @@ void rFirst::barcodeCorrect()
                         buttom.push_back(i);
                 }
         }
-        
+
         //find duplicate in top
         for (uint32_t i = 0; i < top.size(); i++)
         {
@@ -223,18 +277,22 @@ void rFirst::barcodeCorrect()
         }
         //merge duplicate into compact
         std::vector<uint32_t> compact;
-        for (uint32_t i = 0; i < barcodeCountVector.size(); i++)
+        for (uint32_t i = 0; i < top.size(); i++)
         {
-                if (barcodeCountVector[i]._sample == barcodeCountVector[i].sample)
+                if (barcodeCountVector[top[i]]._sample ==
+                    barcodeCountVector[top[i]].sample)
                 {
-                        compact.push_back(i);
+                        compact.push_back(top[i]);
                 }
         }
 
         //find and merge duplicate from buttom into compact
-        //rewrite its _sample with _sample from top
+        //rewrite its _sample with _sample from compact
+#pragma omp parallel for
         for (uint32_t i = 0; i < buttom.size(); i++)
         {
+                transform(barcodeCountVector, buttom, compact, i);
+                /*
                 for (uint32_t j = 0; j < compact.size(); j++)
                 {
                         if (compareBarcode(barcodeCountVector[buttom[i]]._sample,
@@ -247,6 +305,7 @@ void rFirst::barcodeCorrect()
                                 break;
                         }
                 }
+                */
         }
 
         //generate the map from origin sample to corrected sample
@@ -265,7 +324,8 @@ void rFirst::barcodeCorrect()
         uint32_t count = 0;
         while (it != compactSet.end())
         {
-                correctedBarcodeMapList.insert(std::pair<barcode_t, uint32_t>(*it, count));
+                correctedBarcodeMapList.insert(
+                        std::pair<barcode_t, uint32_t>(*it, count));
                 it++;
                 count++;
                 correctedBarcodeVector.push_back(*it);
@@ -276,7 +336,8 @@ void rFirst::barcodeCorrect()
                 //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
                 //reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
                 reads[i].sample =
-                        correctedBarcodeMapList.find(reMapToBarcode.find(reads[i].sample)->second)
+                        correctedBarcodeMapList
+                                .find(reMapToBarcode.find(reads[i].sample)->second)
                                 ->second;
         }
 }
