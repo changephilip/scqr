@@ -28,8 +28,8 @@ typedef struct
 {
         //tag_t tag;
         //uint32_t id;
-        umi_t     umi;
-        barcode_t sample; //barcode
+        umi_t    umi;
+        uint32_t sample; //barcode
         //std::string pair1;
 } rOneRead;
 typedef struct
@@ -54,7 +54,7 @@ class rFirst {
         std::vector<uint32_t>         cellReadsCount;
         /*store pair1 string for R2 search for the paired reads R1 readId*/
         std::map<uint64_t, uint32_t> readsNameTable;
-
+        std::vector<barcode_t>       barcodeOfRead;
         rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread);
         std::hash<std::string> stringHash;
         uint32_t               labels;
@@ -151,12 +151,12 @@ void rFirst::exchange(std::vector<barcodeCount_t> &in,
                       std::vector<uint32_t> &      top,
                       uint32_t                     i)
 {
-        for (uint32_t j = top.size()-1; j > i + 1; j--)
+        for (uint32_t j = top.size() - 1; j > i + 1; j--)
         {
                 if (compareBarcode(in[top[i]]._sample, in[top[j]]._sample))
                 {
                         {
-                                if (in[top[i]]._count < in[top[j]]._count)
+                                if (in[top[i]]._count <= in[top[j]]._count)
                                 {
                                         in[top[i]]._sample = in[top[j]]._sample;
                                         in[top[i]]._count  = in[top[j]]._count;
@@ -172,7 +172,7 @@ void rFirst::transform(std::vector<barcodeCount_t> &in,
                        std::vector<uint32_t> &      dst,
                        uint32_t                     i)
 {
-        for (uint32_t j = 0; j < dst.size(); j++)
+        for (uint32_t j = dst.size() - 1; j > i + 1; i--)
         {
                 if (compareBarcode(in[src[i]]._sample, in[dst[j]]._sample))
                 {
@@ -181,7 +181,6 @@ void rFirst::transform(std::vector<barcodeCount_t> &in,
                         return;
                 }
         }
-        //in[src[i]]._sample = 0xFFFFFFFF;
         in[src[i]]._count = 0;
 }
 /*
@@ -246,12 +245,11 @@ void rFirst::barcodeCorrect()
                 }
         }
 
-        //find duplicate in top
-#pragma omp parallel for
+        //find duplicate in top,not recommended to run in parallel
+        //#pragma omp parallel for
         for (uint32_t i = 0; i < top.size(); i++)
         {
                 exchange(barcodeCountVector, top, i);
-
         }
         //merge duplicate into compact
         std::vector<uint32_t> compact;
@@ -301,7 +299,7 @@ void rFirst::barcodeCorrect()
         }
 
         // assign a cell id for each cell start from 0
-        auto     it    = compactSet.begin();
+        auto     it     = compactSet.begin();
         uint32_t cellId = 0;
         while (it != compactSet.end())
         {
@@ -315,25 +313,23 @@ void rFirst::barcodeCorrect()
 #pragma omp parallel for
         for (uint32_t i = 0; i < reads.size(); i++)
         {
-                //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
-                //reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
-                auto it = correctedBarcodeMapList.find(reads[i].sample);
-                if (it != correctedBarcodeMapList.end())
+                auto it = reMapToBarcode.find(barcodeOfRead[i]);
+                if (it != reMapToBarcode.end())
                 {
                         reads[i].sample =
-                                correctedBarcodeMapList
-                                        .find(reMapToBarcode.find(reads[i].sample)
-                                                      ->second)
-                                        ->second;
+                                correctedBarcodeMapList.find(it->second)->second;
                 }
         }
 
         //calculate reads in every cell
         //cellReadsCount.resize(compact.size());
-        cellReadsCount = std::vector<uint32_t>(compact.size(),0);
-        for (auto item : barcodeCountVector){
-                if (item._count!=0){
-                        cellReadsCount[correctedBarcodeMapList.find(item._sample)->second]+= item._count;
+        cellReadsCount = std::vector<uint32_t>(compact.size(), 0);
+        for (auto item : barcodeCountVector)
+        {
+                if (item._count != 0)
+                {
+                        cellReadsCount[correctedBarcodeMapList.find(item._sample)
+                                               ->second] += item._count;
                 }
         }
 }
@@ -376,6 +372,8 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
                 {
                         rOneRead tmpRead;
                         tmpRead.umi = thisumi;
+                        //tmpRead.sample = thisbarcode;
+                        barcodeOfRead.push_back(thisbarcode);
                         //tmpRead.id  = readId;
                         //tmpRead.sample = thisbarcode;
                         //tmpRead.pair1 = seq->name.s;
@@ -405,7 +403,7 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
         // reads.size() >> seqId.size()
         //assert(reads.size() == seqId.size());
         barcodeCorrect();
-
+        barcodeOfRead.resize(0);
         //for (auto &read : reads)
         //{
         //        read.sample = sampleList.find(read.tag >> 12)->second;

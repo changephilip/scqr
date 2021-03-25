@@ -51,9 +51,12 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
 
         //header
         std::fprintf(fresult,"G/S");
-
         for (uint32_t i=0;i< r1.correctedBarcodeVector.size();i++){
                 std::fprintf(fresult, "\t%lx",r1.correctedBarcodeVector[i]);
+        }
+        std::fprintf(fresult,"RC");
+        for (uint32_t i=0;i< r1.correctedBarcodeVector.size();i++){
+                std::fprintf(fresult, "\t%d",r1.cellReadsCount[i]);
         }
         std::fprintf(fresult, "\n");
 
@@ -142,6 +145,8 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
 {
         uint32_t start;
         uint32_t end;
+        //indexSize = 65536 => 64 - 16
+        //indexSize = 256 => 64 -8
         start = lddb.index[key >> (64 - 16)];
         if ((key >> 48) != 0xFF)
         {

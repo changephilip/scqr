@@ -29,7 +29,7 @@ KSEQ_INIT(gzFile, gzread)
 #define rNATailLength 150
 //const uint32_t rNATailLength        = 150;
 const uint32_t kmerLength           = 32;
-const uint32_t indexSize            = 0xFFFF;
+const uint32_t indexSize            = 65536 ;
 const uint64_t conversionTable[128] = {0,
                                        0,
                                        0,
@@ -583,7 +583,7 @@ void transcriptomeFa::writedb()
         std::fwrite(contact.data(), sizeof(kmer_t), contact.size(), fdb);
         std::fclose(fdb);
         findex = fopen(f_index.c_str(), "wb");
-        std::fwrite(index, sizeof(index[0]), 256, findex);
+        std::fwrite(index, sizeof(index[0]), indexSize, findex);
         std::fclose(findex);
 
         fgene           = fopen(f_gene.c_str(), "w");
