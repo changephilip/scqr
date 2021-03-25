@@ -30,18 +30,22 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
 
         readsPack.resize(rfirst.correctedBarcodeVector.size());
         while (( l = kseq_read(seq)) >=0){
-                auto nameHash = rfirst.stringHash(seq->name.s);
-                if (rfirst.readsNameTable.find(nameHash)!= rfirst.readsNameTable.end()){
-                        uint32_t seqId = rfirst.readsNameTable.find(nameHash)->second;
+                //auto nameHash = rfirst.stringHash(seq->name.s);
+                auto nameHash = rfirst.readsNameTable.find(seq->name.s);
+                if (nameHash != rfirst.readsNameTable.end()){
+                        uint32_t seqId = nameHash->second;
                         rSecondRead tmp;
                         tmp.seq = seq->seq.s;
                         //tmp.readR1Id = seqId;
-                        tmp.sample = rfirst.reads[seqId].sample;
-                        //tmp.sample = rfirst.sampleList.find(seqId)->second;
-                        //tmp.q = seq->qual.s;
-                        //assert(rfirst.readsNameTable.find(thisName).second);
-                        //reads.push_back(tmp);
-                        readsPack[tmp.sample].push_back(tmp);
+                        if (rfirst.reads[seqId].sample != 0xFFFFFFFF)
+                        {
+                                tmp.sample = rfirst.reads[seqId].sample;
+                                //tmp.sample = rfirst.sampleList.find(seqId)->second;
+                                //tmp.q = seq->qual.s;
+                                //assert(rfirst.readsNameTable.find(thisName).second);
+                                //reads.push_back(tmp);
+                                readsPack[tmp.sample].push_back(tmp);
+                        }
                 }
                 readId ++;
         }

@@ -53,7 +53,7 @@ class rFirst {
         std::map<barcode_t, uint32_t> barcodeCount;
         std::vector<uint32_t>         cellReadsCount;
         /*store pair1 string for R2 search for the paired reads R1 readId*/
-        std::map<uint64_t, uint32_t> readsNameTable;
+        std::map<std::string, uint32_t> readsNameTable;
         std::vector<barcode_t>       barcodeOfRead;
         rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread);
         std::hash<std::string> stringHash;
@@ -319,6 +319,9 @@ void rFirst::barcodeCorrect()
                         reads[i].sample =
                                 correctedBarcodeMapList.find(it->second)->second;
                 }
+                else{
+                        reads[i].sample = 0xFFFFFFFF;  // cellLess read
+                }
         }
 
         //calculate reads in every cell
@@ -351,7 +354,7 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
         seq             = kseq_init(fp);
         uint32_t readId = 0;
 
-        std::vector<std::pair<uint64_t, uint32_t>> readsNameVector;
+        std::vector<std::pair<std::string, uint32_t>> readsNameVector;
         std::time_t                                t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tStart of R1 " << std::endl;
 
@@ -359,9 +362,10 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
         {
                 barcode_t thisbarcode = readBarcode(seq->seq.s);
                 umi_t     thisumi     = readUmi(seq->seq.s);
-                if (barcodeCount.find(thisbarcode) != barcodeCount.end())
+                auto it = barcodeCount.find(thisbarcode);
+                if (it != barcodeCount.end())
                 {
-                        barcodeCount.find(thisbarcode)->second++;
+                        it->second++;
                 }
                 else
                 {
@@ -386,13 +390,13 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
                         //readsNameVector.push_back(std::make_pair(seq->name.s, readId));
                         //readsNameVector.push_back(std::make_pair(std::hash<std::string>{}(seq->name.s),readId));
                         readsNameVector.push_back(
-                                std::make_pair(stringHash(seq->name.s), readId));
+                                std::make_pair(seq->name.s, readId));
                         readId++;
                 }
                 //readId++;
         }
 
-        readsNameTable = std::map<uint64_t, uint32_t>(readsNameVector.begin(),
+        readsNameTable = std::map<std::string, uint32_t>(readsNameVector.begin(),
                                                       readsNameVector.end());
 
         readsNameVector.resize(0);
