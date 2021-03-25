@@ -42,6 +42,7 @@ typedef struct
 
 class rFirst {
        public:
+        uint32_t thread;
         /*a unique identifier, tag=[barcode]+[umi]*/
         std::vector<rOneRead> reads;
         std::set<barcode_t>   barcodeSet;
@@ -54,18 +55,16 @@ class rFirst {
         /*store pair1 string for R2 search for the paired reads R1 readId*/
         std::map<uint64_t, uint32_t> readsNameTable;
 
-        rFirst(const std::string r1gz, uint32_t _labels);
+        rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread);
         std::hash<std::string> stringHash;
         uint32_t               labels;
-        inline void            exchange(std::vector<barcodeCount_t> &in,
-                                        std::vector<uint32_t> &      top,
-                                        uint32_t                     i,
-                                        uint32_t                     j);
-        inline void            transform(std::vector<barcodeCount_t> &in,
-                                         std::vector<uint32_t> &      src,
-                                         std::vector<uint32_t> &      dst,
-                                         uint32_t                     i);
-        void                   barcodeCorrect();
+        void
+             exchange(std::vector<barcodeCount_t> &in, std::vector<uint32_t> &top, uint32_t i);
+        void transform(std::vector<barcodeCount_t> &in,
+                       std::vector<uint32_t> &      src,
+                       std::vector<uint32_t> &      dst,
+                       uint32_t                     i);
+        void barcodeCorrect();
 };
 /*
 template<class T>
@@ -148,23 +147,21 @@ inline bool compareBarcode(barcode_t &a, barcode_t &b)
         return true;
 }
 
-inline void rFirst::exchange(std::vector<barcodeCount_t> &in,
-                             std::vector<uint32_t> &      top,
-                             uint32_t                     i,
-                             uint32_t                     j)
+void rFirst::exchange(std::vector<barcodeCount_t> &in,
+                      std::vector<uint32_t> &      top,
+                      uint32_t                     i)
 {
-        if (compareBarcode(in[top[i]]._sample, in[top[j]]._sample))
+        for (uint32_t j = top.size()-1; j > i + 1; j--)
         {
+                if (compareBarcode(in[top[i]]._sample, in[top[j]]._sample))
                 {
-                        if (in[top[i]]._count > in[top[j]]._count)
                         {
-                                in[top[j]]._sample = in[top[i]]._sample;
-                                in[top[j]]._count  = in[top[i]]._count;
-                        }
-                        else
-                        {
-                                in[top[i]]._sample = in[top[j]]._sample;
-                                in[top[i]]._count  = in[top[j]]._count;
+                                if (in[top[i]]._count < in[top[j]]._count)
+                                {
+                                        in[top[i]]._sample = in[top[j]]._sample;
+                                        in[top[i]]._count  = in[top[j]]._count;
+                                        return;
+                                }
                         }
                 }
         }
@@ -187,9 +184,13 @@ void rFirst::transform(std::vector<barcodeCount_t> &in,
         //in[src[i]]._sample = 0xFFFFFFFF;
         in[src[i]]._count = 0;
 }
-
+/*
+  probability of error barcode is very low and real barcode has most of reads count.
+*/
 void rFirst::barcodeCorrect()
 {
+        omp_set_dynamic(false);
+        omp_set_num_threads(this->thread);
         /*
         int                                  N = barcodeSet.size();
         std::vector<std::array<uint64_t, 1>> data;
@@ -227,13 +228,12 @@ void rFirst::barcodeCorrect()
         }
         std::fclose(f);
         */
-        //data = std::vector<std::array<uint64_t,1>>(barcodeSet.begin(),barcodeSet.end());
-        // auto cluster_data = dkm::kmeans_lloyd(data, this->labels);
-        //auto t            = cluster_data;
+
         std::vector<uint32_t> top;
         std::vector<uint32_t> buttom;
         uint32_t              threshold = 128;
         // split all barcode into top(>128) and buttom (<128)
+        // after sort barcodeCountVector, if i1 < i2 then i1._count i2._count
         for (uint32_t i = 0; i < barcodeCountVector.size(); i++)
         {
                 if (barcodeCountVector[i].count > threshold)
@@ -247,36 +247,11 @@ void rFirst::barcodeCorrect()
         }
 
         //find duplicate in top
+#pragma omp parallel for
         for (uint32_t i = 0; i < top.size(); i++)
         {
-#pragma omp parallel for
-                for (uint32_t j = i + 1; j < top.size(); j++)
-                {
-                        if (compareBarcode(barcodeCountVector[top[i]]._sample,
-                                           barcodeCountVector[top[j]]._sample))
-                        {
-#pragma omp critical
-                                {
-                                        if (barcodeCountVector[top[i]]._count >
-                                            barcodeCountVector[top[j]]._count)
-                                        {
-                                                barcodeCountVector[top[j]]._sample =
-                                                        barcodeCountVector[top[i]]
-                                                                ._sample;
-                                                barcodeCountVector[top[j]]._count =
-                                                        barcodeCountVector[top[i]]._count;
-                                        }
-                                        else
-                                        {
-                                                barcodeCountVector[top[i]]._sample =
-                                                        barcodeCountVector[top[j]]
-                                                                ._sample;
-                                                barcodeCountVector[top[i]]._count =
-                                                        barcodeCountVector[top[j]]._count;
-                                        }
-                                }
-                        }
-                }
+                exchange(barcodeCountVector, top, i);
+
         }
         //merge duplicate into compact
         std::vector<uint32_t> compact;
@@ -298,10 +273,11 @@ void rFirst::barcodeCorrect()
         }
         //check homeless barcode
         std::vector<barcode_t> cellLess;
-        uint32_t cellLessCount=0;
-        for (uint32_t i=0;i<buttom.size();i++){
-                if(barcodeCountVector[buttom[i]]._count ==0){
-
+        uint32_t               cellLessCount = 0;
+        for (uint32_t i = 0; i < buttom.size(); i++)
+        {
+                if (barcodeCountVector[buttom[i]]._count == 0)
+                {
                         cellLess.push_back(barcodeCountVector[buttom[i]].sample);
                         cellLessCount += barcodeCountVector[buttom[i]].count;
                 }
@@ -317,7 +293,7 @@ void rFirst::barcodeCorrect()
                                 item.sample, item._sample));
                 }
         }
-        // generate cell set 
+        // generate cell set
         std::set<barcode_t> compactSet;
         for (auto i : compact)
         {
@@ -326,13 +302,13 @@ void rFirst::barcodeCorrect()
 
         // assign a cell id for each cell start from 0
         auto     it    = compactSet.begin();
-        uint32_t count = 0;
+        uint32_t cellId = 0;
         while (it != compactSet.end())
         {
                 correctedBarcodeMapList.insert(
-                        std::pair<barcode_t, uint32_t>(*it, count));
+                        std::pair<barcode_t, uint32_t>(*it, cellId));
                 it++;
-                count++;
+                cellId++;
                 correctedBarcodeVector.push_back(*it);
         }
         //assgin barcode id for each read
@@ -341,7 +317,7 @@ void rFirst::barcodeCorrect()
         {
                 //reads[i].sample = barcodeMapList.find(reads[i].tag >> (umi*2))->second;
                 //reads[i].sample = barcodeMapList.find(reads[i].sample)->second;
-                auto it =  correctedBarcodeMapList.find(reads[i].sample);
+                auto it = correctedBarcodeMapList.find(reads[i].sample);
                 if (it != correctedBarcodeMapList.end())
                 {
                         reads[i].sample =
@@ -353,9 +329,12 @@ void rFirst::barcodeCorrect()
         }
 
         //calculate reads in every cell
-
-        for (auto item : barcodeCountVector)
-        {
+        //cellReadsCount.resize(compact.size());
+        cellReadsCount = std::vector<uint32_t>(compact.size(),0);
+        for (auto item : barcodeCountVector){
+                if (item._count!=0){
+                        cellReadsCount[correctedBarcodeMapList.find(item._sample)->second]+= item._count;
+                }
         }
 }
 
@@ -365,8 +344,9 @@ void rFirst::barcodeCorrect()
   How to find pair-end reads?
   construct readsNameTable with pair of (name.s , readId)
 */
-rFirst::rFirst(const std::string r1gz, uint32_t _labels)
+rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
 {
+        this->thread = _thread;
         this->labels = _labels;
         gzFile  fp;
         kseq_t *seq;
