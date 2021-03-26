@@ -64,7 +64,10 @@ class rFirst {
                        std::vector<uint32_t> &      src,
                        std::vector<uint32_t> &      dst,
                        uint32_t                     i);
+        void removeDuplicateUMI(std::vector<rOneRead> &in,uint32_t start,uint32_t end);
         void barcodeCorrect();
+        void indelCorrect();
+        void umiDuplicate();
 };
 /*
 template<class T>
@@ -126,21 +129,22 @@ inline uint64_t shift2bit(barcode_t &in, uint32_t x)
 {
         return ((in >> (62 - x * 2)) & 3U);
 }
-inline bool compareBarcode(barcode_t &a, barcode_t &b)
+inline bool compareBarcode(barcode_t &a, barcode_t &b, uint32_t r)
 {
         uint32_t d = 0;
         for (uint32_t i = 0; i < 32; i++)
         {
-                if (_mm_popcnt_u64(shift2bit(a, i) xor shift2bit(b, i)) > 0)
+                //if (_mm_popcnt_u64(shift2bit(a, i) xor shift2bit(b, i)) > 0)
+                if ((shift2bit(a, i) xor shift2bit(b, i)) != 0)
                 {
                         d++;
-                        if (d > 4)
+                        if (d > r)
                         {
                                 return false;
                         }
                 }
         }
-        if (d > 4)
+        if (d > r)
         {
                 return false;
         }
@@ -153,7 +157,7 @@ void rFirst::exchange(std::vector<barcodeCount_t> &in,
 {
         for (uint32_t j = top.size() - 1; j > i + 1; j--)
         {
-                if (compareBarcode(in[top[i]]._sample, in[top[j]]._sample))
+                if (compareBarcode(in[top[i]]._sample, in[top[j]]._sample,4))
                 {
                         {
                                 if (in[top[i]]._count <= in[top[j]]._count)
@@ -172,9 +176,11 @@ void rFirst::transform(std::vector<barcodeCount_t> &in,
                        std::vector<uint32_t> &      dst,
                        uint32_t                     i)
 {
-        for (uint32_t j = dst.size() - 1; j > i + 1; i--)
+        //for (uint32_t j = dst.size() - 1; j > i + 1; j--)
+        //for (uint32_t j = dst.size() - 1; j >= 0; j--)
+        for (uint32_t j = 0; j < dst.size(); j++)
         {
-                if (compareBarcode(in[src[i]]._sample, in[dst[j]]._sample))
+                if (compareBarcode(in[src[i]]._sample, in[dst[j]]._sample,4))
                 {
                         in[src[i]]._sample = in[dst[j]]._sample;
                         in[src[i]]._count  = in[dst[j]]._count;
@@ -251,7 +257,8 @@ void rFirst::barcodeCorrect()
         {
                 exchange(barcodeCountVector, top, i);
         }
-        //merge duplicate into compact
+
+        //merge duplicate into compact,step 1
         std::vector<uint32_t> compact;
         for (uint32_t i = 0; i < top.size(); i++)
         {
@@ -261,10 +268,17 @@ void rFirst::barcodeCorrect()
                         compact.push_back(top[i]);
                 }
         }
-
+        // step 2
+        for (uint32_t i=0;i < top.size(); i++){
+                if (barcodeCountVector[top[i]]._sample != barcodeCountVector[top[i]].sample){
+                        transform(barcodeCountVector, top, compact, i);
+                }
+        }
+        // check
+        
         //find and merge duplicate from buttom into compact
         //rewrite its _sample with _sample from compact
-#pragma omp parallel for
+        #pragma omp parallel for
         for (uint32_t i = 0; i < buttom.size(); i++)
         {
                 transform(barcodeCountVector, buttom, compact, i);
@@ -327,7 +341,7 @@ void rFirst::barcodeCorrect()
         //calculate reads in every cell
         //cellReadsCount.resize(compact.size());
         cellReadsCount = std::vector<uint32_t>(compact.size(), 0);
-        for (auto item : barcodeCountVector)
+        for (barcodeCount_t item : barcodeCountVector)
         {
                 if (item._count != 0)
                 {
@@ -335,6 +349,59 @@ void rFirst::barcodeCorrect()
                                                ->second] += item._count;
                 }
         }
+}
+
+void rFirst::indelCorrect(){
+        std::vector<barcode_t>  target;
+        for (auto item: correctedBarcodeMapList){
+                target.push_back(item.first);
+        }
+
+        std::set<uint64_t> miniKmer;
+        uint32_t miniKmerSize= 8;
+
+        for (auto item: correctedBarcodeMapList){
+                
+        }
+}
+
+void rFirst::removeDuplicateUMI(std::vector<rOneRead> &in, uint32_t start, uint32_t end){
+        std::set<umi_t> umiSet;
+        #pragma  omp parallel for
+        for (uint32_t i=start;i<end;i++){
+                auto it = umiSet.find(in[i].umi);
+                if (it ==umiSet.end()){
+                        umiSet.insert(i);
+                }
+                else{
+                        in[i].sample = 0xFFFFFFFF;
+                }
+        }
+}
+
+void rFirst::umiDuplicate(){
+        __gnu_parallel::sort(reads.begin(), reads.end(),[](rOneRead &left, rOneRead &right){return left.sample < right.sample;});
+        auto p = reads.begin();
+        auto n = reads.begin()++;
+        std::vector<uint32_t> s;
+        std::vector<uint32_t> e;
+        while (n!= reads.end()){
+                if (n->sample == p->sample){
+                        n++;
+                }
+                else{
+                        s.push_back(std::distance(reads.begin(), p));
+                        e.push_back(std::distance(reads.begin(), n));
+                        p = n;
+                        n++;
+                }
+        }
+
+        for (uint32_t i =0 ;i< s.size();i++){
+                //__gnu_parallel::sort(reads.begin() + s[i], reads.begin()+e[i],[](rOneRead &left,rOneRead &right){return left.umi < right.umi;});
+                removeDuplicateUMI(this->reads, s[i], e[i]);
+        }
+
 }
 
 /*
@@ -387,7 +454,7 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
                         readsNameTable.insert(
                                 std::pair<std::string, uint32_t>(seq->name.s, readId));
                         */
-                        //readsNameVector.push_back(std::make_pair(seq->name.s, readId));
+                        readsNameVector.push_back(std::make_pair(seq->name.s, readId));
                         //readsNameVector.push_back(std::make_pair(std::hash<std::string>{}(seq->name.s),readId));
                         readsNameVector.push_back(
                                 std::make_pair(seq->name.s, readId));
@@ -408,6 +475,8 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
         //assert(reads.size() == seqId.size());
         barcodeCorrect();
         barcodeOfRead.resize(0);
+
+        umiDuplicate();
         //for (auto &read : reads)
         //{
         //        read.sample = sampleList.find(read.tag >> 12)->second;

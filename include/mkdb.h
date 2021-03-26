@@ -590,7 +590,7 @@ void transcriptomeFa::writedb()
         uint32_t geneId = 0;
         for (auto geneName : geneList)
         {
-                std::fprintf(fgene, "%d\t%s\n", geneId, geneName.c_str());
+                std::fprintf(fgene, "%s\n",geneName.c_str());
                 geneId++;
         }
         std::fclose(fgene);
@@ -631,6 +631,7 @@ void read_DB_Index(const std::string f_db,
 
         findex                = std::fopen(f_index.c_str(), "rb");
         uint32_t index_length = indexSize;
+        ldDB.index = new uint32_t [index_length];
         std::fread(ldDB.index, sizeof(uint32_t), index_length, findex);
         std::fclose(findex);
 

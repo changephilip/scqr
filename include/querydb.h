@@ -54,6 +54,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         for (uint32_t i=0;i< r1.correctedBarcodeVector.size();i++){
                 std::fprintf(fresult, "\t%lx",r1.correctedBarcodeVector[i]);
         }
+        std::fprintf(fresult,"\n");
         std::fprintf(fresult,"RC");
         for (uint32_t i=0;i< r1.correctedBarcodeVector.size();i++){
                 std::fprintf(fresult, "\t%d",r1.cellReadsCount[i]);
