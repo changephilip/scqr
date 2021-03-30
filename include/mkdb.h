@@ -17,12 +17,14 @@
 #include <algorithm>
 
 //#include <fmt/ranges.h>
-#include <zlib.h>
+//#include <zlib.h>
 #include <omp.h>
 #include <parallel/algorithm>
 
 #include <regex>
 #include "kseq.h"
+#define ZWRAP_USE_ZSTD 1
+#include "zstd_zlibwrapper.h"
 
 KSEQ_INIT(gzFile, gzread)
 
@@ -650,9 +652,9 @@ void read_DB_Index(const std::string f_db,
                         break;
                 }
         }
-        for (uint32_t i = 0; i < _gene.size() / 2; i++)
+        for (uint32_t i = 0; i < _gene.size(); i++)
         {
-                ldDB.gene.push_back(_gene[2 * i + 1]);
+                ldDB.gene.push_back(_gene[i]);
         }
         //fmt::print("{}\n", ldDB.gene);
         std::fclose(fgene);

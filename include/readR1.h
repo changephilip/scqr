@@ -367,7 +367,6 @@ void rFirst::indelCorrect(){
 
 void rFirst::removeDuplicateUMI(std::vector<rOneRead> &in, uint32_t start, uint32_t end){
         std::set<umi_t> umiSet;
-        #pragma  omp parallel for
         for (uint32_t i=start;i<end;i++){
                 auto it = umiSet.find(in[i].umi);
                 if (it ==umiSet.end()){
@@ -380,7 +379,7 @@ void rFirst::removeDuplicateUMI(std::vector<rOneRead> &in, uint32_t start, uint3
 }
 
 void rFirst::umiDuplicate(){
-        __gnu_parallel::sort(reads.begin(), reads.end(),[](rOneRead &left, rOneRead &right){return left.sample < right.sample;});
+        __gnu_parallel::sort(reads.begin(), reads.end(),[](rOneRead left, rOneRead right){return left.sample < right.sample;});
         auto p = reads.begin();
         auto n = reads.begin()++;
         std::vector<uint32_t> s;
@@ -396,7 +395,9 @@ void rFirst::umiDuplicate(){
                         n++;
                 }
         }
-
+        omp_set_dynamic(false);
+        omp_set_num_threads(this->thread);
+        #pragma  omp parallel for
         for (uint32_t i =0 ;i< s.size();i++){
                 //__gnu_parallel::sort(reads.begin() + s[i], reads.begin()+e[i],[](rOneRead &left,rOneRead &right){return left.umi < right.umi;});
                 removeDuplicateUMI(this->reads, s[i], e[i]);

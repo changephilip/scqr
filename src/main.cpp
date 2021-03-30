@@ -2,6 +2,8 @@
 #include <getopt.h>
 #include <stdlib.h>
 
+
+
 int main(int argc, char *argv[])
 {
         /*
@@ -26,7 +28,7 @@ int main(int argc, char *argv[])
                 case 2: {
                         loadedDB lldb;
                         read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", lldb);
-                        rFirst  r1(argv[2],4000);
+                        rFirst  r1(argv[2],4000,32);
                         rSecond r2(argv[3], r1);
                         rQuery  rQ(r1, r2, lldb, 32, argv[4]);
                         break;
@@ -40,3 +42,4 @@ int main(int argc, char *argv[])
         //std::vector<std::string> gene;
         return 0;
 }
+

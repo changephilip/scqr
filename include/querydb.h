@@ -38,7 +38,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
                                 quantRNAMatrix[i][q]++;
                         }
                 }
-                if ( i % 8 ==0 and true){
+                if ( i % 32 ==0 and true){
                         std::time_t t = std::time(nullptr);
                         std::cout << std::asctime(std::localtime(&t)) << "\tStep is " << i << std::endl;
                 }
@@ -149,7 +149,7 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
         //indexSize = 65536 => 64 - 16
         //indexSize = 256 => 64 -8
         start = lddb.index[key >> (64 - 16)];
-        if ((key >> 48) != 0xFF)
+        if ((key >> 48) != 0xFFFF)
         {
                 end = lddb.index[(key >> (48)) + 1];
         }
@@ -162,7 +162,7 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
         uint32_t pe = end;
         uint32_t mid = ps + (pe-ps)/2;
        
-        while (ps+1 != pe)
+        while ( ps + 1 < pe)
         {
                 if (lddb.db[mid].kmer < key)
                 {
