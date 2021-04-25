@@ -21,8 +21,9 @@ class rFirst {
         /*store pair1 string for R2 search for the paired reads R1 readId*/
         scqr_map<std::string, uint32_t> readsNameTable;
         std::vector<barcode_t>       barcodeOfRead;
-        rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread);
+
         rFirst();
+        rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread);
         std::hash<std::string> stringHash;
         uint32_t               labels;
         void
@@ -286,9 +287,9 @@ void rFirst::barcodeCorrect()
         {
                 correctedBarcodeMapList.insert(
                         std::pair<barcode_t, uint32_t>(*it, cellId));
-                it++;
                 cellId++;
                 correctedBarcodeVector.push_back(*it);
+                it++;
         }
         //assgin barcode id for each read
 #pragma omp parallel for
@@ -372,6 +373,7 @@ void rFirst::umiDuplicate(){
 
 }
 
+rFirst::rFirst(){}
 /*
   filter unique tag(barcode + umi) and get these reads from R1
   save out these sample(barcode) id and transfer into 0-based index.
@@ -452,6 +454,5 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
 
         t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R1 " << std::endl;
-        scqr_set<uint32_t> mm;
 }
 #endif

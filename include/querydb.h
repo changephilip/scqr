@@ -1,4 +1,8 @@
-#include "../include/readR2.h"
+#ifndef __QUERYDB
+#define __QUERYDB
+
+#include "read.h"
+#include "readR2.h"
 #include <mutex>
 #include <ctime>
 typedef uint32_t gene_t;
@@ -187,3 +191,5 @@ inline uint32_t rQuery::search(uint64_t key, const loadedDB &lddb)
         }
         return 0xFFFFFFFF;
 }
+
+#endif

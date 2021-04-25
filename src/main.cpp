@@ -1,3 +1,4 @@
+#include "../include/read.h"
 #include "../include/querydb.h"
 #include <getopt.h>
 #include "../include/cxxopts.hpp"
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
 
         cxxopts::Options options("scqr", "Quantification of RNA in Single Cell");
         options.add_options()("m,mode",
-                              "--mode=index for build Index or \n--mode=run for run SCQR",
+                              "--mode=index for build Index or \n--mode=run for run SCQR,\n--mode=pair-hide for sequence-sorted paired reads",
                               cxxopts::value<std::string>())(
                 "t,thread", "Thread used", cxxopts::value<uint32_t>())(
                 "f,fasta", "RNA fasta for index", cxxopts::value<std::string>())(
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
                                 results["thread"].as<uint32_t>());
                         break;
                 }
-                if (results["mode"].as<std::string>() == "run")
+                else if (results["mode"].as<std::string>() == "run")
                 {
                         loadedDB lldb;
                         read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", lldb);
@@ -70,6 +71,20 @@ int main(int argc, char *argv[])
                         rSecond r2(results["R2"].as<std::string>(), r1);
                         rQuery  rQ(r1,
                                   r2,
+                                  lldb,
+                                  results["thread"].as<uint32_t>(),
+                                  results["out"].as<std::string>());
+                        break;
+                }
+                else if (results["mode"].as<std::string>() == "pair-hide")
+                {
+                        loadedDB lldb;
+                        read_DB_Index("SCQRDB.DATA", "SCQRDB.INDEX", "SCQRDB.GENE", lldb);
+                        rRead  pair_reads(results["R1"].as<std::string>(),
+                                         results["R2"].as<std::string>(),
+                                         results["thread"].as<uint32_t>());
+                        rQuery rQ(pair_reads.rf,
+                                  pair_reads.rs,
                                   lldb,
                                   results["thread"].as<uint32_t>(),
                                   results["out"].as<std::string>());

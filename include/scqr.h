@@ -2,7 +2,6 @@
 #define _SCQR
 #include <stdint.h>
 #include <string>
-#include <vector>
 
 #define USE_PHMAP
 #ifndef USE_PHMAP
@@ -62,17 +61,5 @@ typedef struct
         barcode_t bc;
         umi_t     umitag;
 } read_t;
-
-int test(){
-        scqr_map<barcode_t,uint32_t> a;
-        scqr_set<uint32_t > b;
-        return 0;
-}
-
-
-class ss{
- public:
-        scqr_set<uint32_t> s;
-};
 
 #endif

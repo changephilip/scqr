@@ -9,9 +9,11 @@ class rSecond {
  public:
         std::vector<rSecondRead> reads;
         std::vector<std::vector<rSecondRead>> readsPack;
-        rSecond(const std::string &r2gz, const rFirst & rfirst);
         rSecond();
+        rSecond(const std::string &r2gz, const rFirst & rfirst);
 };
+
+rSecond::rSecond(){}
 
 rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
         gzFile fp;
@@ -37,6 +39,8 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
                         {
                                 tmp.sample = rfirst.reads[seqId].sample;
                                 //tmp.sample = rfirst.sampleList.find(seqId)->second;
+                                
+                                //tmp.sample = rfirst.correctedBarcodeMapList.find(tmp.sample)->second;
                                 //tmp.q = seq->qual.s;
                                 //assert(rfirst.readsNameTable.find(thisName).second);
                                 //reads.push_back(tmp);
