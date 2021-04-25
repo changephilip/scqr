@@ -1,3 +1,6 @@
+#ifndef _mkdb
+#define _mkdb
+#include "scqr.h"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -12,8 +15,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include <set>
-#include <map>
+
 #include <algorithm>
 
 //#include <fmt/ranges.h>
@@ -31,7 +33,7 @@ KSEQ_INIT(gzFile, gzread)
 #define rNATailLength 150
 //const uint32_t rNATailLength        = 150;
 const uint32_t kmerLength           = 32;
-const uint32_t indexSize            = 65536 ;
+const uint32_t indexSize            = 65536;
 const uint64_t conversionTable[128] = {0,
                                        0,
                                        0,
@@ -308,10 +310,11 @@ class transcriptomeFa {
 
 transcriptomeFa::transcriptomeFa(const char* fa, uint32_t thread_)
 {
-        gzFile                fp;
-        kseq_t*               seq;
-        int                   l;
-        std::set<std::string> geneSet;
+        gzFile  fp;
+        kseq_t* seq;
+        int     l;
+
+        scqr_set<std::string>                          geneSet;
         fp  = gzopen(fa, "r");
         seq = kseq_init(fp);
         while ((l = kseq_read(seq)) >= 0)
@@ -339,8 +342,7 @@ transcriptomeFa::transcriptomeFa(const char* fa, uint32_t thread_)
         {
                 geneList.push_back(item);
         }
-
-        std::map<std::string, uint32_t> geneTable;
+        scqr_map<std::string, uint32_t> geneTable;
 
         for (auto item : geneSet)
         {
@@ -392,9 +394,9 @@ void transcriptomeFa::addKmer(transFa& rna)
         uint32_t n_kmer = cutLength - kmerLength + 1;
 #else
         // build rna index for start to end
-        char* p         = NULL;
-        p               = rna.seq;
-        uint32_t n_kmer = rna.length - kmerLength + 1;
+        char* p                    = NULL;
+        p                          = rna.seq;
+        uint32_t            n_kmer = rna.length - kmerLength + 1;
 
 #endif
         for (uint64_t i = 0; i < n_kmer; i++)
@@ -484,7 +486,9 @@ void redupKmer(std::vector<kmer_t>& in, std::vector<kmer_t>& out)
 template <class T> void reduplicate(std::vector<T>& in, std::vector<T>& out)
 {
         std::sort(in.begin(), in.end());
-        std::set<T> tmp;
+
+        scqr_set<T> tmp;
+
         for (auto item : in)
         {
                 tmp.insert(item);
@@ -592,7 +596,7 @@ void transcriptomeFa::writedb()
         uint32_t geneId = 0;
         for (auto geneName : geneList)
         {
-                std::fprintf(fgene, "%s\n",geneName.c_str());
+                std::fprintf(fgene, "%s\n", geneName.c_str());
                 geneId++;
         }
         std::fclose(fgene);
@@ -633,7 +637,7 @@ void read_DB_Index(const std::string f_db,
 
         findex                = std::fopen(f_index.c_str(), "rb");
         uint32_t index_length = indexSize;
-        ldDB.index = new uint32_t [index_length];
+        ldDB.index            = new uint32_t[index_length];
         std::fread(ldDB.index, sizeof(uint32_t), index_length, findex);
         std::fclose(findex);
 
@@ -659,3 +663,5 @@ void read_DB_Index(const std::string f_db,
         //fmt::print("{}\n", ldDB.gene);
         std::fclose(fgene);
 };
+
+#endif

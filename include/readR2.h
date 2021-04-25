@@ -1,20 +1,16 @@
-#include "../include/readR1.h"
+#ifndef __READR2
+#define __READR2
+#include "scqr.h"
+#include "readR1.h"
 
 
-typedef struct
-{
-        //std::string pair2;
-        //uint32_t readR1Id;
-        barcode_t sample;
-        std::string seq;
-        //std::string q; // quality
-} rSecondRead;
 
 class rSecond {
  public:
         std::vector<rSecondRead> reads;
         std::vector<std::vector<rSecondRead>> readsPack;
         rSecond(const std::string &r2gz, const rFirst & rfirst);
+        rSecond();
 };
 
 rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
@@ -54,3 +50,5 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
         std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R2 " << std::endl;
 
 }
+
+#endif

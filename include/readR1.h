@@ -1,61 +1,28 @@
-#include "../include/mkdb.h"
-//#include "../include/dkm.hpp"
-//#include "../include/dkm_parallel.hpp"
-#include <stdint.h>
+#ifndef  __READR1
+#define __READR1
+#include "scqr.h"
+#include "mkdb.h"
 
-#include <immintrin.h>
-#include <popcntintrin.h>
-
-#define _RUNMODE_ 1
-#if ((_RUNMODE_))
-const uint32_t barcode = 0x10;
-const uint32_t umi     = 0xC;
-#else
-const uint32_t barcode = 0x8;
-const uint32_t umi     = 0x6;
-#endif
-
-const uint32_t polyT      = 0x8;
-const uint32_t polyTMask  = 0xFFFF;
-const uint32_t polyTMask1 = 0xFFF0;
-#define jumpbit 0
-
-typedef uint64_t tag_t;
-typedef uint32_t umi_t;
-typedef uint64_t barcode_t;
-
-typedef struct
-{
-        //tag_t tag;
-        //uint32_t id;
-        umi_t    umi;
-        uint32_t sample; //barcode
-        //std::string pair1;
-} rOneRead;
-typedef struct
-{
-        barcode_t sample;
-        uint32_t  count;
-        barcode_t _sample;
-        uint32_t  _count;
-} barcodeCount_t;
+scqr_map<uint32_t,uint32_t> ss;
+scqr_set<uint32_t> consT;
 
 class rFirst {
        public:
         uint32_t thread;
         /*a unique identifier, tag=[barcode]+[umi]*/
         std::vector<rOneRead> reads;
-        std::set<barcode_t>   barcodeSet;
+        scqr_set<barcode_t>   barcodeSet;
         /*assign 0-based id for each sample*/
-        std::map<barcode_t, uint32_t> correctedBarcodeMapList;
+        scqr_map<barcode_t, uint32_t> correctedBarcodeMapList;
         /*get origin sampleId(barcode) with index*/
         std::vector<barcode_t>        correctedBarcodeVector;
-        std::map<barcode_t, uint32_t> barcodeCount;
+        scqr_map<barcode_t, uint32_t> barcodeCount;
         std::vector<uint32_t>         cellReadsCount;
         /*store pair1 string for R2 search for the paired reads R1 readId*/
-        std::map<std::string, uint32_t> readsNameTable;
+        scqr_map<std::string, uint32_t> readsNameTable;
         std::vector<barcode_t>       barcodeOfRead;
         rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread);
+        rFirst();
         std::hash<std::string> stringHash;
         uint32_t               labels;
         void
@@ -306,7 +273,7 @@ void rFirst::barcodeCorrect()
                 }
         }
         // generate cell set
-        std::set<barcode_t> compactSet;
+        scqr_set<barcode_t> compactSet;
         for (auto i : compact)
         {
                 compactSet.insert(barcodeCountVector[i].sample);
@@ -357,7 +324,7 @@ void rFirst::indelCorrect(){
                 target.push_back(item.first);
         }
 
-        std::set<uint64_t> miniKmer;
+        scqr_set<uint64_t> miniKmer;
         uint32_t miniKmerSize= 8;
 
         for (auto item: correctedBarcodeMapList){
@@ -366,7 +333,7 @@ void rFirst::indelCorrect(){
 }
 
 void rFirst::removeDuplicateUMI(std::vector<rOneRead> &in, uint32_t start, uint32_t end){
-        std::set<umi_t> umiSet;
+        scqr_set<umi_t> umiSet;
         for (uint32_t i=start;i<end;i++){
                 auto it = umiSet.find(in[i].umi);
                 if (it ==umiSet.end()){
@@ -464,7 +431,7 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
                 //readId++;
         }
 
-        readsNameTable = std::map<std::string, uint32_t>(readsNameVector.begin(),
+        readsNameTable = scqr_map<std::string, uint32_t>(readsNameVector.begin(),
                                                       readsNameVector.end());
 
         readsNameVector.resize(0);
@@ -485,4 +452,6 @@ rFirst::rFirst(const std::string r1gz, uint32_t _labels, uint32_t _thread)
 
         t = std::time(nullptr);
         std::cout << std::asctime(std::localtime(&t)) << "\tEnd of R1 " << std::endl;
+        scqr_set<uint32_t> mm;
 }
+#endif
