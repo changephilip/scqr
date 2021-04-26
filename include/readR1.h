@@ -264,7 +264,7 @@ void rFirst::barcodeCorrect()
         }
 
         //generate the map from origin sample to corrected sample
-        std::map<barcode_t, barcode_t> reMapToBarcode;
+        scqr_map<barcode_t, barcode_t> reMapToBarcode;
         for (auto item : barcodeCountVector)
         {
                 if (item._count != 0)

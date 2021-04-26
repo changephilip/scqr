@@ -25,8 +25,6 @@
 
 #include <regex>
 #include "kseq.h"
-#define ZWRAP_USE_ZSTD 1
-#include "zstd_zlibwrapper.h"
 
 KSEQ_INIT(gzFile, gzread)
 

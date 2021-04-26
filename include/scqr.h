@@ -10,12 +10,21 @@
 #define scqr_set std::set
 #define scqr_map std::map
 #else
-#include <parallel_hashmap/phmap.h>
-#include <parallel_hashmap/btree.h>
+#include "parallel_hashmap/phmap.h"
+#include "parallel_hashmap/btree.h"
 #define scqr_set phmap::btree_set
 #define scqr_map phmap::btree_map
 
 #endif
+
+
+#ifdef __USE_ZSTD
+#define ZWRAP_USE_ZSTD 1
+#include "zstd_zlibwrapper.h"
+#else
+#include <zlib.h>
+#endif
+
 
 #define _RUNMODE_ 1
 #if ((_RUNMODE_))

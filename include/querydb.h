@@ -88,7 +88,7 @@ rQuery::rQuery(const rFirst &r1, const rSecond &r2, const loadedDB &lddb, uint32
         delete[] quantRNAMatrix;
  }
 
-template <class T1, class T2> inline T1 findMapMax(std::map<T1, T2> &in)
+template <class T1, class T2> inline T1 findMapMax(scqr_map<T1, T2> &in)
 {
         auto p = in.begin();
         auto m = in.begin();
@@ -110,7 +110,7 @@ inline uint32_t rQuery::align(const rSecondRead &read)
         if (read.seq.size() < kmerLength) return 0xFFFFFFFF;
         uint32_t                     n_kmer = read.seq.size() - kmerLength + 1;
         //score : [geneId, count]
-        std::map<uint32_t, uint16_t> score;
+        scqr_map<uint32_t, uint16_t> score;
         //auto                         p        = read.seq.begin();
         const char *t = read.seq.c_str();
         uint32_t                     distance = 0;
