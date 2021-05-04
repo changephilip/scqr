@@ -25,6 +25,10 @@
 #include <zlib.h>
 #endif
 
+#define BARCODE_NULL 0xFFFFFFFF
+
+
+//#define __LHJ
 
 #define _RUNMODE_ 1
 #if ((_RUNMODE_))
@@ -47,8 +51,9 @@ typedef uint64_t barcode_t;
 typedef struct
 {
         umi_t    umi;
-        uint32_t sample; //barcode
-} rOneRead;
+        uint32_t sample; //barcode id,a number for each barcode
+        uint32_t id;
+}rOneRead;
 
 typedef struct
 {
@@ -60,7 +65,7 @@ typedef struct
 
 typedef struct
 {
-        barcode_t   sample;
+        //uint32_t   sample;
         std::string seq;
         //std::string q; // quality
 } rSecondRead;

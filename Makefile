@@ -3,7 +3,7 @@ CC=gcc
 
 CXXFLAGS=--std=c++11 -g -fopenmp -lzstd -lm -lz  -mpopcnt
 
-RFLAGS=--std=c++11 -O2 -fopenmp -lz -mpopcnt
+RFLAGS=--std=c++11  -g -fopenmp -lz -mpopcnt -DDEBUG
 
 TOP_DIR=.
 INCLUDE_DIR=-I$(TOP_DIR)/include

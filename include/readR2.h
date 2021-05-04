@@ -35,16 +35,16 @@ rSecond::rSecond(const std::string &r2gz, const rFirst & rfirst){
                         rSecondRead tmp;
                         tmp.seq = seq->seq.s;
                         //tmp.readR1Id = seqId;
-                        if (rfirst.reads[seqId].sample != 0xFFFFFFFF)
+                        if (rfirst.reads[seqId].sample != BARCODE_NULL)
                         {
-                                tmp.sample = rfirst.reads[seqId].sample;
+                                //tmp.sample = rfirst.reads[seqId].sample;
                                 //tmp.sample = rfirst.sampleList.find(seqId)->second;
                                 
                                 //tmp.sample = rfirst.correctedBarcodeMapList.find(tmp.sample)->second;
                                 //tmp.q = seq->qual.s;
                                 //assert(rfirst.readsNameTable.find(thisName).second);
                                 //reads.push_back(tmp);
-                                readsPack[tmp.sample].push_back(tmp);
+                                readsPack[rfirst.reads[seqId].sample].push_back(tmp);
                         }
                 }
                 readId ++;

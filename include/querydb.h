@@ -101,6 +101,7 @@ template <class T1, class T2> inline T1 findMapMax(scqr_map<T1, T2> &in)
                 }
                 p++;
         }
+        if (m->first < 32){return 0xFFFFFFF;}
         return m->first;
 }
 
