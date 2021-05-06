@@ -204,6 +204,11 @@ void rFirst::barcodeCorrect()
                              [](barcodeCount_t left, barcodeCount_t right) {
                                      return left.count < right.count;
                              });
+        uint32_t checkSum=0;
+        for (auto item: barcodeCountVector){
+                checkSum += item.count;
+        }
+        std::cout << "checkSum is\t" << checkSum << std::endl;
         /*
         std::sort(barcodeCountVector.begin(),
                   barcodeCountVector.end(),
@@ -278,15 +283,15 @@ void rFirst::barcodeCorrect()
         //check homeless barcode
         std::vector<barcode_t> cellLess;
         uint32_t               cellLessCount = 0;
-        for (uint32_t i = 0; i < buttom.size(); i++)
-        {
-                if (barcodeCountVector[buttom[i]]._count == 0)
-                {
-                        cellLess.push_back(barcodeCountVector[buttom[i]].sample);
-                        cellLessCount += barcodeCountVector[buttom[i]].count;
+
+        for (uint32_t i=0; i < barcodeCountVector.size();i++){
+                if (barcodeCountVector[i]._count ==0){
+                        cellLess.push_back(barcodeCountVector[i].sample);
+                        cellLessCount += barcodeCountVector[i].count;
                 }
         }
-        std::cout << "cellLessCount is\t" << cellLessCount <<std::endl;
+
+        std::cout << "cellLessReads Count is\t" << cellLessCount <<std::endl;
         //generate the map from origin sample to corrected sample
         scqr_map<barcode_t, barcode_t> reMapToBarcode;
         for (auto item : barcodeCountVector)
@@ -339,7 +344,7 @@ void rFirst::barcodeCorrect()
                 if (item._count != 0)
                 {
                         cellReadsCount[correctedBarcodeMapList.find(item._sample)
-                                               ->second] += item._count;
+                                               ->second] += item.count;
                 }
         }
 }
@@ -402,6 +407,7 @@ void rFirst::umiDuplicate()
                         n++;
                 }
         }
+        std::cout << "validated reads count before umi reduplicate is\t" << e[s.size()-1] << std::endl;
         omp_set_dynamic(false);
         omp_set_num_threads(this->thread);
 #pragma omp parallel for

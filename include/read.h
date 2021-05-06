@@ -99,13 +99,15 @@ rRead::rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread)
         std::vector<std::pair<barcode_t,uint32_t>> uniqueCount;
         uint32_t p=0;
         uint32_t n=1;
-        while (n!= rf.barcodeVector.size()){
+        while (n<= rf.barcodeVector.size()){
                 if (rf.barcodeVector[p]!= rf.barcodeVector[n]){
                         uniqueCount.push_back(std::pair<barcode_t,uint32_t>(rf.barcodeVector[p],n-p));
                         p =n;
                 }
                 n++;
         }
+
+
         
 
         rf.barcodeVector.clear();
