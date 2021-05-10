@@ -2,6 +2,7 @@
 #define _SCQR
 #include <stdint.h>
 #include <string>
+#include <regex>
 
 #define USE_PHMAP
 #ifndef USE_PHMAP

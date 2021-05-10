@@ -306,13 +306,34 @@ class transcriptomeFa {
         void clear();
 };
 
+std::vector<std::string> tokenize(const std::string str, const std::regex re)
+{
+        std::sregex_token_iterator it{str.begin(), str.end(), re, -1};
+        std::vector<std::string>   tokenized{it, {}};
+
+        // Additional check to remove empty strings
+        tokenized.erase(
+                std::remove_if(tokenized.begin(),
+                               tokenized.end(),
+                               [](std::string const& s) { return s.size() == 0; }),
+                tokenized.end());
+
+        return tokenized;
+}
+const std::regex re(R"(|)");
+
+std::string getGeneName(const std::string &in){
+        const std::vector<std::string> tokenized = tokenize(in, re);
+        return tokenized[5];
+}
+
 transcriptomeFa::transcriptomeFa(const char* fa, uint32_t thread_)
 {
         gzFile  fp;
         kseq_t* seq;
         int     l;
 
-        scqr_set<std::string>                          geneSet;
+        scqr_set<std::string> geneSet;
         fp  = gzopen(fa, "r");
         seq = kseq_init(fp);
         while ((l = kseq_read(seq)) >= 0)
@@ -323,7 +344,8 @@ transcriptomeFa::transcriptomeFa(const char* fa, uint32_t thread_)
                 tmp.length      = strlen(seq->seq.s);
                 tmp.seq         = new char[tmp.length + 1];
                 memcpy(tmp.seq, seq->seq.s, sizeof(char) * (tmp.length + 1));
-                tmp.seq[tmp.length]     = '\0';
+                tmp.seq[tmp.length] = '\0';
+#ifndef __LHJ
                 std::string geneid      = seq->comment.s;
                 uint32_t    leftbracket = geneid.find_last_of("(");
                 //if (geneid.find_first_of("(") != leftbracket){
@@ -332,6 +354,10 @@ transcriptomeFa::transcriptomeFa(const char* fa, uint32_t thread_)
                 uint32_t rightbracket = geneid.find_last_of(")");
                 tmp.geneName =
                         geneid.substr(leftbracket + 1, rightbracket - leftbracket - 1);
+#else
+                std::string geneid = seq->name.s;
+                tmp.geneName = getGeneName(geneid);
+#endif
                 geneSet.insert(tmp.geneName);
                 this->originFa.push_back(tmp);
                 transNum++;
@@ -392,9 +418,12 @@ void transcriptomeFa::addKmer(transFa& rna)
         uint32_t n_kmer = cutLength - kmerLength + 1;
 #else
         // build rna index for start to end
-        char* p                    = NULL;
-        p                          = rna.seq;
-        uint32_t            n_kmer = rna.length - kmerLength + 1;
+        if (rna.length < kmerLength) {
+                return;
+        }
+        char* p = NULL;
+        p = rna.seq;
+        uint32_t n_kmer = rna.length - kmerLength + 1;
 
 #endif
         for (uint64_t i = 0; i < n_kmer; i++)

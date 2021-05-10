@@ -46,6 +46,7 @@ inline bool med(T in,T target){
 */
 
 #ifndef __LHJ
+#define RADIUS 4
 inline barcode_t readBarcode(const char *seq)
 {
         //return (barcode_t)baseToBinaryForward_Barcode(seq + jumpbit, barcode);
@@ -56,7 +57,6 @@ inline umi_t readUmi(const char *seq)
 {
         return (umi_t)baseToBinaryForward(seq + barcode + jumpbit, umi);
 }
-#define RADIUS 4
 #else
 #define RADIUS 5
 // cls1(9)+L1(12)+cls2(9)+L2(13)+cls3(9)+UMI(8)
