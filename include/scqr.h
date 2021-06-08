@@ -28,7 +28,7 @@
 
 #define BARCODE_NULL 0xFFFFFFFF
 
-
+#define __CELL_RANGER
 //#define __LHJ
 
 #define _RUNMODE_ 1

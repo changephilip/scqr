@@ -13,10 +13,9 @@ class rRead {
         uint32_t thread;
 
         rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread);
-        void                     CountBarcode(barcode_t _bc);
-        rFirst                   rf;
-        rSecond                  rs;
-        std::vector<rSecondRead> reads;
+        void    CountBarcode(barcode_t _bc);
+        rFirst  rf;
+        rSecond rs;
 };
 
 void rRead::CountBarcode(barcode_t _bc)
@@ -40,24 +39,25 @@ rRead::rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread)
         kseq_t *seq1;
         kseq_t *seq2;
 
-        rf.thread     = _thread;
+        rf.thread = _thread;
 
         std::time_t t = std::time(nullptr);
-        std::cout << std::asctime(std::localtime(&t)) << "Loading Reads Start " << std::endl;
+        std::cout << std::asctime(std::localtime(&t)) << "Loading Reads Start "
+                  << std::endl;
 
-        fp1  = gzopen(r1gz.c_str(), "r");
-        fp2  = gzopen(r2gz.c_str(), "r");
-        seq1 = kseq_init(fp1);
-        seq2 = kseq_init(fp2);
-        uint32_t readId=0;
+        fp1             = gzopen(r1gz.c_str(), "r");
+        fp2             = gzopen(r2gz.c_str(), "r");
+        seq1            = kseq_init(fp1);
+        seq2            = kseq_init(fp2);
+        uint32_t readId = 0;
         //while (kseq_read(seq1) >= 0 and kseq_read(seq2) >= 0)
-        while (kseq_read(seq1) >= 0 )
+        while (kseq_read(seq1) >= 0)
         {
                 {
                         //std::string s1 = seq1->name.s;
                         //std::string s2 = seq2->name.s;
                         if (false)
-                                //if (s1 != s2)
+                        //if (s1 != s2)
                         {
                                 std::perror("Please use fastqc to check origin file!\n");
                                 //std::printf("SEQ1\n%s\n", s1.c_str());
@@ -73,7 +73,7 @@ rRead::rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread)
 
                                 rOneRead tmpRead;
                                 tmpRead.umi = thisumi;
-                                tmpRead.id = readId;
+                                tmpRead.id  = readId;
                                 //rf.barcodeOfRead.push_back(thisbarcode);
                                 rf.reads.push_back(tmpRead);
                                 //rf.barcodeSet.insert(thisbarcode);
@@ -83,53 +83,60 @@ rRead::rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread)
                                 tmpRead2.seq    = seq2->seq.s;
                                 reads.emplace_back(tmpRead2);
                                 */
-                                readId ++;
+                                readId++;
                         }
                 }
         }
 
-        rf.barcodeOfRead = std::vector<barcode_t>(rf.barcodeVector.begin(),rf.barcodeVector.end());
+        rf.barcodeOfRead =
+                std::vector<barcode_t>(rf.barcodeVector.begin(), rf.barcodeVector.end());
 
         t = std::time(nullptr);
-        std::cout << std::asctime(std::localtime(&t)) << "Loading Reads R1 Completed " << std::endl;
+        std::cout << std::asctime(std::localtime(&t)) << "Loading Reads R1 Completed "
+                  << std::endl;
 
         std::cout << "Num Of Reads is " << rf.barcodeOfRead.size() << std::endl;
 
-        __gnu_parallel::sort(rf.barcodeVector.begin(),rf.barcodeVector.end(),[](barcode_t left,barcode_t right){return left < right;});
-        std::vector<std::pair<barcode_t,uint32_t>> uniqueCount;
-        uint32_t p=0;
-        uint32_t n=1;
-        while (n<= rf.barcodeVector.size()){
-                if (rf.barcodeVector[p]!= rf.barcodeVector[n]){
-                        uniqueCount.push_back(std::pair<barcode_t,uint32_t>(rf.barcodeVector[p],n-p));
-                        p =n;
+        __gnu_parallel::sort(
+                rf.barcodeVector.begin(),
+                rf.barcodeVector.end(),
+                [](barcode_t left, barcode_t right) { return left < right; });
+        std::vector<std::pair<barcode_t, uint32_t>> uniqueCount;
+        uint32_t                                    p = 0;
+        uint32_t                                    n = 1;
+        while (n <= rf.barcodeVector.size())
+        {
+                if (rf.barcodeVector[p] != rf.barcodeVector[n])
+                {
+                        uniqueCount.push_back(std::pair<barcode_t, uint32_t>(
+                                rf.barcodeVector[p], n - p));
+                        p = n;
                 }
                 n++;
         }
 
-
-        
-
         rf.barcodeVector.clear();
-        rf.barcodeCount = scqr_map<barcode_t,uint32_t>(uniqueCount.begin(),uniqueCount.end());
+        rf.barcodeCount =
+                scqr_map<barcode_t, uint32_t>(uniqueCount.begin(), uniqueCount.end());
         uniqueCount.clear();
 
         //std::unique(rf.barcodeVector.begin(), rf.barcodeVector.end());
         //rf.barcodeSet = scqr_set<barcode_t>(rf.barcodeVector.begin(),rf.barcodeVector.end());
-       
+
         rf.barcodeCorrect();
         rf.umiDuplicate();
 
         t = std::time(nullptr);
-        std::cout << std::asctime(std::localtime(&t)) << "Correcting Barcode Completed " << std::endl;
+        std::cout << std::asctime(std::localtime(&t)) << "Correcting Barcode Completed "
+                  << std::endl;
 
+        uint64_t numOftaggedReads = 0;
 
-        uint64_t numOftaggedReads=0;
-
-        numOftaggedReads = std::accumulate(rf.cellReadsCount.begin(), rf.cellReadsCount.end(), 0);
+        numOftaggedReads =
+                std::accumulate(rf.cellReadsCount.begin(), rf.cellReadsCount.end(), 0);
 
         std::cout << "Num Of Tagged Reads is " << numOftaggedReads << std::endl;
-        
+
         rs.readsPack.resize(rf.correctedBarcodeVector.size());
 
         t = std::time(nullptr);
@@ -138,26 +145,29 @@ rRead::rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread)
         //gzclose(fp2);
         //fp2 = gzopen(r2gz.c_str(),"r");
         //seq2= kseq_init(fp2);
-        uint32_t readCount=0;
-        while (kseq_read(seq2)>=0){
-                rSecondRead tmp;
-                tmp.seq = seq2->seq.s;
-                if (rf.reads[readCount].sample != BARCODE_NULL){
+        uint32_t readCount = 0;
+        while (kseq_read(seq2) >= 0)
+        {
+                if (rf.reads[readCount].sample != BARCODE_NULL)
+                {
+                        rSecondRead tmp;
+                        tmp.seq = seq2->seq.s;
+
                         rs.readsPack[rf.reads[readCount].sample].emplace_back(tmp);
                 }
                 readCount++;
-
         }
 
-        #ifdef DEBUG
-        uint32_t readsPackSum=0;
-        for (uint32_t i=0;i<rs.readsPack.size();i++){
-                readsPackSum+= rs.readsPack[i].size();
+#ifdef DEBUG
+        uint32_t readsPackSum = 0;
+        for (uint32_t i = 0; i < rs.readsPack.size(); i++)
+        {
+                readsPackSum += rs.readsPack[i].size();
         }
 
-        std::cout << "readsPackSum\t" << readsPackSum <<std::endl;
-        #endif
-        
+        std::cout << "readsPackSum\t" << readsPackSum << std::endl;
+#endif
+
         assert(readCount == rf.barcodeOfRead.size());
 
         rf.barcodeOfRead.resize(0);
@@ -172,10 +182,8 @@ rRead::rRead(const std::string r1gz, const std::string r2gz, uint32_t _thread)
         }
         */
 
-        reads.resize(0);
-
         t = std::time(nullptr);
-        std::cout << std::asctime(std::localtime(&t)) << "Generate reads pack Completed " << std::endl;
-
+        std::cout << std::asctime(std::localtime(&t)) << "Generate reads pack Completed "
+                  << std::endl;
 }
 #endif
